@@ -1,0 +1,358 @@
+---
+output: html_document
+---
+<center>
+# Práctica 3
+#### Agustin Riquelme y Heriberto Espino
+</center>
+
+Con el objetivo de sintetizar las líneas de código lo más posible, se han realizado una funciones con los argumentos de la variable de predictora, la variable de respuesta y el nivel de significancia α. Las funciones se usarán a lo largo del documento con el objetivo de visualizar los datos de manera más amigable, el código de la función se ocultará para el reporte pero permanecerá en el formato markdown para su correcta ejecución.
+
+```{r}
+library(DT)
+library(kableExtra)
+library(readxl)
+
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+
+suppressPackageStartupMessages({
+  library(zoo)
+})
+
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+
+data <- read_excel("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Ejemplo subasta.xlsx")
+
+# Variables predictoras: Edad, Número de postores Variable de respuesta: Edad
+edad     <- data$Edad
+postores <- data$`Num Postores`
+precio   <- data$`Precio de subasta`
+```
+
+```{r}
+modelo_lineal_datos <-   function(x, y, α){
+  
+  modelo <- lm(y ~ x)
+  d <- c()
+  
+  # Plots
+  # Grafico de dispersión
+  plot(x,y, col = "#004C99", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión")
+  # Boxplot
+  boxplot(x, col = "#004C99", border = "#003366", xlab = "Variable de predictora",  ylab = "Frecuencia", main = "Boxplot x")
+  # Histograma
+  hist(x, col = "#003366", border = "white", xlab = "Variable de predictora", main = "Histograma x", breaks = 20)
+  # Scatteplot
+  plot(x, y, col = "#003366", lwd = 1,  cex = 0.5,
+       xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Recta de regresión",
+       abline( lm( y ~ x ), col = "#004C99", lwd = 3) )
+  
+  
+  # Identificar cosas
+  n <- length(x)
+  # Identificar β0
+  β0 <- modelo$coefficients["(Intercept)"]
+  # Identificar β1
+  β1 <- modelo$coefficients["x"]
+  # Ecuación de la recta
+  yhat = recta <- β0  +  β1 * x
+  # s
+  s <- summary(modelo)$sigma
+  # S cuad
+  scuad <- s^2
+  # CV
+  cv <- 100 * s / mean(y)
+  
+  
+  # Inferencia para β1# H0: β1 = 0 vs H1: β1 ≠ 0
+  # Obtener los grados de libertad
+  df <- summary(modelo)$df[2]
+  # Obtener los cuantiles
+  qti <- qt(α/2, df, lower.tail = TRUE)
+  qtd <- qt(α/2, df, lower.tail = FALSE)
+  # Obtener el estadistico de prueba
+  tc <- summary(modelo)$coefficients["x", "t value"]
+  # Obtener pvalor
+  pvalor <- summary(modelo)$coefficients["x", "Pr(>|t|)"]
+  
+  
+  # Intervalo de confianza para β1
+  intconfβ1 <- confint(modelo, level = 1 - α)
+  intconfβ1min <- intconfβ1["x", 1]
+  intconfβ1max <- intconfβ1["x", 2]
+  # Error estándar de yhat (intervalos de confianza)
+  SCx <- sum(x^2)  -  n * mean(x)^2
+  erroryhat <- s * sqrt( (1/n)  +  (x - mean(x))^2 / SCx ) 
+  errorpredic <- s * sqrt( 1  +  (1/n)  +  (x - mean(x))^2 / SCx ) 
+  # Límites del error estándar de yhat
+  lieeyhat <- recta  -  qtd * erroryhat
+  lseeyhat <- recta  +  qtd * erroryhat
+  # Límites del error estándar de la predicción
+  lieepredic <- recta  -  qtd * errorpredic
+  lseepredic <- recta  +  qtd * errorpredic
+  # Gráfica
+  plot(x, y, col = "#003366", lwd = .5, cex = 0.5,
+        xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Intervalos de confianza")
+  abline (a = β0, b = β1, col = "#0066cc", lwd = 2)
+  lines (x = sort(x),  y = sort(lieeyhat),  col="#3399ff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lseeyhat),  col="#3399ff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lieepredic),  col="#00ffff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lseepredic),  col="#00ffff",  lty = 2, lwd = 2)
+  
+  
+  # Análisis de residudales
+  errores <- summary(modelo)$residuals
+  prom_errores <- mean(errores)
+  var_errores <- var(errores)
+  # Gráfica para saber si es varianza fija
+  plot(errores, col="#003366", type = "o",lwd = 2,
+       xlab = "Índice de Observación", ylab = "Valor de Error", main = "Gráfico de Errores")
+  lines(1:n, rep(0,n), col="#3399ff", lwd = 2) #  Si hay dos horizontales que encierran la grafica, varianza constante
+  # Histograma
+  hist(errores, col = "#003366", border = "white",
+       main = "Histograma de Errores", xlab = "Errores", ylab = "Frecuencia")
+  # Boxplot
+  boxplot(errores, main = "Boxplot de errores", col = "#004C99", border = "#003366")
+  # QQ
+  qqnorm(errores, col = "#003366", lwd = 2, cex = 0.1,
+         main = "Gráfico QQ de Errores", xlab = "Cuantiles teóricos", ylab = "Cuantiles de los errores") 
+  qqline(errores, col = "#3399ff", lwd = 2)
+  
+  
+  # Test de normalidad
+  library(nortest)
+  if (n < 30){
+    normalidad_shapiro <- shapiro.test(errores) # Para n ≤ 30
+    d[16] = shapiro.pavlor <- normalidad_shapiro$p.value
+    d[17] = "Shap. P valor"
+  } else {
+    normalidad_lillie <- lillie.test(errores)
+    d[16] = lillie.pavalor <- normalidad_lillie$p.value
+    d[17] = "Lillie P valor"
+  }
+  normalidad_anderson <- ad.test(errores)
+  anderson.pvalor <- normalidad_anderson$p.value
+  
+  # Test de correlacion
+  # Pearson 
+  rho1 = correlacion_pearson <- cor(x, y)
+  # Spearman
+  rho2 = correlacion_spearman <- cor(x, y, method = "spearman")
+  
+  # Autocorrelacion de los errores
+  library(lmtest)
+  dwtest(modelo)
+  dw <- dwtest(modelo)$statistic
+  pvalor.dw <- dwtest(modelo)$p.value
+  
+  Datos <- c("α", "β0","β1","S","S^2", "CV", "df","qti","qtd","tc","P valor","Mín. β1","Máx. β1","Prom. err.", "Var. error" , d[17], "Anderson P valor", "Rho Pearson","Rho Spearman","dw")
+  Valores <- c( α , β0 , β1, s ,  scuad  ,  cv ,df, qti , qtd , tc , pvalor, intconfβ1min , intconfβ1max, prom_errores, var_errores, d[16],  anderson.pvalor, rho1, rho2, dw)
+  
+  data.frame(Datos, Valores) %>%
+    kbl(caption = "Informacion del modelo") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_correlacion <- function(x, y, α){
+  d <- c()
+  
+  # Pearson 
+  rho1 = correlacion_pearson <- cor(x, y)
+  if (abs(correlacion_pearson) >= 0.6) {
+    d[1] = "Hay una correlación fuerte"
+  } else if (abs(correlacion_pearson) <= 0.4) {
+    d[1] = "Hay una correlación baja"
+  } else {
+    d[1] = "Hay una correlación media"
+  }
+  # Spearman
+  rho2 = correlacion_spearman <- cor(x, y, method = "spearman")
+  if (abs(correlacion_spearman) >= 0.6) {
+    d[2] = "\nHay una correlación fuerte"
+  } else if (abs(correlacion_spearman) <= 0.4) {
+    d[2] = "\nHay una correlación baja"
+  } else {
+    d[2] =  "\nHay una correlación media"
+  }
+  
+  Datos = c("Pearson", "Spearman")
+  options(scipen = 999)
+  data.frame("Rho" = Datos, "Conclusión" = d) %>%
+    kbl(caption = "Coeficiente de correlación") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+modelo_lineal_inferencia_β1 <-   function(x, y, α){
+  
+  modelo <- lm(y ~ x)
+  d <- c()
+  
+  # Inferencia para β1# H0: β1 = 0 vs H1: β1 ≠ 0
+  df <- summary(modelo)$df[2]
+  # Obtener los cuantiles
+  qtd <- qt(α/2, df, lower.tail = FALSE)
+  # Obtener el estadistico de prueba
+  tc <- summary(modelo)$coefficients["x", "t value"]
+  # Obtener pvalor
+  pvalor <- summary(modelo)$coefficients["x", "Pr(>|t|)"]
+  
+  # Prueba de hipotesis para β1
+  if( abs(tc) > qtd ){
+    d[1] = "Rechazamos H0. β1 ≠ 0"} 
+  else {
+    d[1] = "No hay evidencia suficiente para rechazar H0"}
+  
+  if(2*pvalor < α){
+    d[2] = "Rechazamos H0. β1 ≠ 0"}
+  else{
+    d[2] = "No hay evidencia suficiente para rechazar H0"}
+  
+  D <- c("tc", "p valor")
+  
+  options(scipen = 999)
+  data.frame("Prueba de hipótesis" = D, "Conclusión" = d) %>%
+    kbl(caption = "Inferencia para β1      H0: β1 = 0 vs H1: β1 ≠ 0") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_analisis_residuales <-  function(x, y, α){
+  D <- c()
+  d <- c()
+  # Análisis de residudales
+  n <- length(x)
+  
+  modelo <- lm(y ~ x)
+  errores <- summary(modelo)$residuals
+  
+  # Test de normalidad
+  library(nortest)
+  
+  if (n < 30){
+    D[1] = "Normalidad Shapiro"
+    normalidad_shapiro <- shapiro.test(errores) # Para n ≤ 30
+    if (normalidad_shapiro$p.value >= α) {
+      d[1] = "pvalor ≥ α, no rechazamos H0"
+    } else {
+      d[1] = "pvalor < α, rechazamos H0. No son normales"
+    }
+  } else {
+    D[1] = "Normalidad Lillie"
+    normalidad_lillie <- lillie.test(errores)
+    lillie.pavalor <- normalidad_lillie$p.value
+    if (lillie.pavalor >= α) {
+      d[1] = "pvalor ≥ α, no rechazamos H0"
+    } else {
+      d[1] = "pvalor < α, rechazamos H0. No son normales"
+    }
+  }
+  
+  # Anderson
+  D[2] = "Normalidad Anderson"
+  normalidad_anderson <- ad.test(errores)
+  anderson.pvalor <- normalidad_anderson$p.value
+  if (normalidad_anderson$p.value >= α) {
+    d[2] = "pvalor ≥ α, no rechazamos H0"
+  } else {
+    d[2] = "pvalor < α, rechazamos H0. No son normales"
+  }
+  
+  options(scipen = 999)
+  data.frame("Test de normalidad" = D, "Valor" = d) %>%
+    kbl(caption = "Test de normalidad \nH0: Los datos son normales vs H1: Los datos no son normales") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_autocorrelacion_errores <-  function(x, y, α){
+  modelo <- lm(y ~ x)
+  d <- c()
+  # Autocorrelacion de los errores
+  library(lmtest)
+  dwtest(modelo)
+  dw <- dwtest(modelo)$statistic
+  pvalor.dw <- dwtest(modelo)$p.value
+  
+  if (dw <= 1){
+    d[1] <- "Hay una correlación positiva en los residuos"
+  } else if (dw >= 3) {
+    d[1] <- "Hay una correlación negativa en los residuos"
+  } else {
+    d[1] <- "No hay una correlación en los residuos"
+  }
+  
+  Datos <- c("dw")
+  
+  options(scipen = 999)
+  data.frame("Test" = Datos, "Conclusión" = d) %>%
+    kbl(caption = "Test Durbin-Watson") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+```
+
+A continuación se presentará el anáisis de regresión lineal sobre la predicción del precio del reloj con sus años de antiguedad. Los datos presentados incluyen valores relacionados con un modelo estadístico y las pruebas realizadas en relación con ese modelo.
+
+```{r}
+modelo_lineal_datos(edad, precio, 0.05)
+modelo_lineal_correlacion(edad, precio, 0.05)
+modelo_lineal_inferencia_β1(edad, precio, 0.05)
+modelo_lineal_analisis_residuales(edad, precio, 0.05)
+modelo_lineal_autocorrelacion_errores(edad, precio, 0.05)
+```
+
+Para empezar, el valor α, que es 0.05 en este caso, representa el nivel de significancia utilizado en las pruebas estadísticas. Este valor es crucial para determinar si los resultados obtenidos son estadísticamente significativos.
+
+Los valores β0 y β1 son coeficientes de regresión. β0, que es igual a -192.05, es el coeficiente de intercepción, mientras que β1, con un valor de 10.48, es el coeficiente de pendiente en un modelo de regresión lineal. Estos coeficientes son esenciales para comprender cómo se relacionan las variables en el modelo y cómo una variable (en este caso, β1) afecta a la variable dependiente.
+
+S y S^2 representan la desviación estándar y la varianza, respectivamente. En este caso, la desviación estándar es de aproximadamente 273.53 y la varianza es de alrededor de 74818.83. Estos valores indican la dispersión de los datos y la variabilidad en torno a la media.
+
+CV (coeficiente de variación) es una medida de la variabilidad relativa en comparación con la media y es igual a aproximadamente 20.61%. Cuanto mayor sea el valor del coeficiente de variación, mayor será la variabilidad en relación con la media.
+
+El valor df (grados de libertad) es 30, lo que sugiere que se utilizaron 32 observaciones en el análisis estadístico, a las cuales se le restaron 2 grados de libertad por ser una prueba de dos colas.
+
+qti y qtd son valores relacionados con una prueba de t-student bilateral. El valor tc representa el valor crítico de la prueba t, y el p-valor es extremadamente bajo (2.16e-06), lo que sugiere que hay evidencia suficiente para rechazar la hipótesis nula en esta prueba. Esto indica que los coeficientes en el modelo de regresión son significativos.
+
+Los valores Mín. β1 y Máx. β1 indican los valores mínimos y máximos que puede tomar el coeficiente β1 con un nivel de confianza determinado. Esto es útil para comprender la variabilidad en el coeficiente de pendiente.
+
+Prom. err. (promedio de error) es prácticamente cero, lo que indica que el modelo parece estar bien ajustado a los datos.
+
+Var. error (varianza del error) es de aproximadamente 72405.32, lo que sugiere la cantidad de variabilidad en los datos que no se explica mediante el modelo de regresión.
+
+Los valores de Lillie y Anderson P son p-valores asociados con pruebas de normalidad. Un p-valor alto (0.88 y 0.92, respectivamente) sugiere que los datos se ajustan bien a una distribución normal.
+
+Rho Pearson y Rho Spearman son coeficientes de correlación. Rho Pearson mide la correlación lineal y es 0.73, lo que indica una correlación positiva moderada. Rho Spearman mide la correlación de rango y es 0.76, lo que también sugiere una correlación positiva.
+
+Finalmente, dw es el estadístico de Durbin-Watson, que se utiliza para detectar la presencia de autocorrelación en los residuos de un modelo de regresión. Un valor de 1.80 indica que es probable que no haya autocorrelación en los residuos.
+
+A continuación se presentarán el anáisis de regresión lineal sobre la predicción del precio del reloj con el número de postores. Los datos presentados incluyen valores relacionados con un modelo estadístico y las pruebas realizadas en relación con ese modelo.
+
+```{r}
+modelo_lineal_datos(postores, precio, 0.05)
+modelo_lineal_correlacion(postores, precio, 0.05)
+modelo_lineal_inferencia_β1(postores, precio, 0.05)
+modelo_lineal_analisis_residuales(postores, precio, 0.05)
+modelo_lineal_autocorrelacion_errores(postores, precio, 0.05)
+```
+
+En primer lugar, el valor α, que es 0.05 en este caso, representa el nivel de significancia utilizado en las pruebas estadísticas. Este valor es fundamental para determinar si los resultados son estadísticamente significativos.
+
+Los valores β0 y β1 son coeficientes de regresión. β0, que tiene un valor de 804.91, es el coeficiente de intercepción, mientras que β1, con un valor de 54.76, es el coeficiente de pendiente en un modelo de regresión lineal. Estos coeficientes son esenciales para comprender cómo se relacionan las variables en el modelo y cómo una variable (en este caso, β1) afecta a la variable dependiente.
+
+S y S^2 representan la desviación estándar y la varianza, respectivamente. En este caso, la desviación estándar es de aproximadamente 367.43 y la varianza es de alrededor de 135004.24. Estos valores indican la dispersión de los datos y la variabilidad en torno a la media.
+
+CV (coeficiente de variación) es una medida de la variabilidad relativa en comparación con la media y es igual a aproximadamente 27.69%. Cuanto mayor sea el valor del coeficiente de variación, mayor será la variabilidad en relación con la media.
+
+El valor df (grados de libertad) es 30, lo que sugiere que se utilizaron 32 observaciones en el análisis estadístico, a las cuales se le restaron 2 grados de libertad por ser una prueba de dos colas.
+
+qti y qtd son valores relacionados con una prueba de t-student bilateral. El valor tc representa el valor crítico de la prueba t, y el p-valor es 0.0252, que es menor que el nivel de significancia α (0.05). Esto sugiere que hay evidencia suficiente para rechazar la hipótesis nula en esta prueba. En otras palabras, los coeficientes en el modelo de regresión son significativos.
+
+Los valores Mín. β1 y Máx. β1 indican los valores mínimos y máximos que puede tomar el coeficiente β1 con un nivel de confianza determinado. Esto es útil para comprender la variabilidad en el coeficiente de pendiente.
+
+Prom. err. (promedio de error) es prácticamente cero, lo que indica que el modelo parece estar bien ajustado a los datos.
+
+Var. error (varianza del error) es de aproximadamente 130649.27, lo que sugiere la cantidad de variabilidad en los datos que no se explica mediante el modelo de regresión.
+
+Los valores de Lillie y Anderson P son p-valores asociados con pruebas de normalidad. Un p-valor bajo (0.0429 y 0.0448, respectivamente) sugiere que los datos no se ajustan bien a una distribución normal. Esto puede indicar la necesidad de considerar transformaciones o modelos diferentes.
+
+Rho Pearson y Rho Spearman son coeficientes de correlación. Rho Pearson mide la correlación lineal y es 0.395, lo que indica una correlación positiva débil. Rho Spearman mide la correlación de rango y es 0.409, lo que también sugiere una correlación positiva media.
+
+Finalmente, dw es el estadístico de Durbin-Watson, que se utiliza para detectar la presencia de autocorrelación en los residuos de un modelo de regresión. Un valor de 2.163 indica que puede haber autocorrelación en los residuos.
+
+Si bien la prueba t indica que los coeficientes en el modelo son significativos, es importante tener en cuenta que los datos no se ajustan bien a una distribución normal, y la correlación entre las variables es débil.

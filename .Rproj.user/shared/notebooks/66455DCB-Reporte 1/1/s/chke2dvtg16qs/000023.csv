@@ -1,0 +1,1 @@
+"0","lines(1:n, rep(0,n), col=""red"")#1:n empieza en 1, termina en n"

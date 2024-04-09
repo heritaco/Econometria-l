@@ -1,0 +1,37 @@
+x <- c(39, 43, 21, 64, 57, 47, 28, 75, 34, 52)
+y <- c(65, 78, 52, 82, 92, 89, 73, 98, 56, 75)
+
+milm <- function(x, y) {
+  
+  n <- length(x)
+  xprom <- mean(x)
+  yprom <- mean(y)
+  
+  SCxy <- sum(x * y) - n * xprom * yprom
+  SCx <- sum(x^2) - n * xprom^2
+  SCy <- sum(y^2) - n * yprom^2
+  
+  b1 <- SCxy / SCx
+  b0 <- yprom - b1 * xprom
+  
+  recta <- b0 + b1*x
+  
+  plot(x ,y , col="blue", pch=20, lwd=3, 
+       xlab = "Cal mate", ylab = "cal calculo", main = "Regresion lineal calculo vs mate") 
+  #plot(grafica lo del eje de las x, lo de las y, color, pch les cambia la forma, lwd que tan grueso es, 
+  #alpha e (0.1), xlab etiqueta x, ylab etiqueta y, main = "titulo")
+  abline(b=b1, a=b0, lwd=3, col="skyblue") #te hace la rec
+  
+  model <- list(coefficients = c(b0, b1),
+                residuals = y - (b0 + b1 * x),
+                fitted.values = b0 + b1 * x,
+                df = c(length(b0), n - 2))
+  
+  class(model) <- "lm"
+  return(model)
+}
+
+
+plot(milm,x,y)
+my_model <- my_lm(x, y)
+summary(my_model)

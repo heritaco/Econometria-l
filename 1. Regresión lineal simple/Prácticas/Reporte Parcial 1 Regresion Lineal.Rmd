@@ -1,0 +1,461 @@
+---
+output: html_document
+---
+
+<center>
+# Proyecto 1
+#### Agustin Riquelme y Heriberto Espino
+</center>
+
+</n>
+
+Para este modelo de regresión líneal se usó la base de datos lung cap, la cuál recolecta información de un grupo de personas acerca de si son fumadoras o no, las edades respectivas, además de la altura, el género y su FEV(Forced Expiratory Volumen), que mide la habilidad de expedir aire de los pulmones. En este caso, la variable que se tomará como predictora será la edad, sin emabrgo, de igual manera se seccionará en dos, en fumadores y no fumadores para un mejor análisis de los datos.
+
+```{r echo = FALSE, warning = FALSE}
+library(DT)
+library(kableExtra)
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+```
+
+```{r echo = FALSE}
+modelo_lineal_datos <-   function(x, y, α){
+  modelo <- lm(y ~ x)
+  d <- c()
+  # Scatteplot
+  plot(x, y, col = "#003366", lwd = 1,  cex = 0.5,
+       xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Recta de regresión",
+       abline( lm( y ~ x ), col = "#004C99", lwd = 3) )
+  
+  
+  # Identificar cosas
+  n <- length(x)
+  # Identificar β0
+  β0 <- modelo$coefficients["(Intercept)"]
+  # Identificar β1
+  β1 <- modelo$coefficients["x"]
+  # Ecuación de la recta
+  yhat = recta <- β0  +  β1 * x
+  # s
+  s <- summary(modelo)$sigma
+  # S cuad
+  scuad <- s^2
+  # CV
+  cv <- 100 * s / mean(y)
+  
+  
+  # Inferencia para β1# H0: β1 = 0 vs H1: β1 ≠ 0
+  # Obtener los grados de libertad
+  df <- summary(modelo)$df[2]
+  # Obtener los cuantiles
+  qti <- qt(α/2, df, lower.tail = TRUE)
+  qtd <- qt(α/2, df, lower.tail = FALSE)
+  # Obtener el estadistico de prueba
+  tc <- summary(modelo)$coefficients["x", "t value"]
+  # Obtener pvalor
+  pvalor <- summary(modelo)$coefficients["x", "Pr(>|t|)"]
+  
+  
+  # Intervalo de confianza para β1
+  intconfβ1 <- confint(modelo, level = 1 - α)
+  intconfβ1min <- intconfβ1["x", 1]
+  intconfβ1max <- intconfβ1["x", 2]
+  # Error estándar de yhat (intervalos de confianza)
+  SCx <- sum(x^2)  -  n * mean(x)^2
+  erroryhat <- s * sqrt( (1/n)  +  (x - mean(x))^2 / SCx ) 
+  errorpredic <- s * sqrt( 1  +  (1/n)  +  (x - mean(x))^2 / SCx ) 
+  # Límites del error estándar de yhat
+  lieeyhat <- recta  -  qtd * erroryhat
+  lseeyhat <- recta  +  qtd * erroryhat
+  # Límites del error estándar de la predicción
+  lieepredic <- recta  -  qtd * errorpredic
+  lseepredic <- recta  +  qtd * errorpredic
+  # Gráfica
+  plot(x, y, col = "#003366", lwd = .5, cex = 0.5,
+       xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Intervalos de confianza")
+  abline (a = β0, b = β1, col = "#0066cc", lwd = 2)
+  lines (x = sort(x),  y = sort(lieeyhat),  col="#3399ff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lseeyhat),  col="#3399ff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lieepredic),  col="#00ffff",  lty = 2, lwd = 2)
+  lines (x = sort(x),  y = sort(lseepredic),  col="#00ffff",  lty = 2, lwd = 2)
+  
+  
+  # Análisis de residudales
+  errores <- summary(modelo)$residuals
+  prom_errores <- mean(errores)
+  var_errores <- var(errores)
+  # Gráfica para saber si es varianza fija
+  plot(errores, col="#003366", type = "o",lwd = 2,
+       xlab = "Índice de Observación", ylab = "Valor de Error", main = "Gráfico de Errores")
+  lines(1:n, rep(0,n), col="#3399ff", lwd = 2) #  Si hay dos horizontales que encierran la grafica, varianza constante
+  # Histograma
+  hist(errores, col = "#003366", border = "white",
+       main = "Histograma de Errores", xlab = "Errores", ylab = "Frecuencia")
+  # Boxplot
+  boxplot(errores, main = "Boxplot de errores", col = "#004C99", border = "#003366")
+  # QQ
+  qqnorm(errores, col = "#003366", lwd = 2, cex = 0.1,
+         main = "Gráfico QQ de Errores", xlab = "Cuantiles teóricos", ylab = "Cuantiles de los errores") 
+  qqline(errores, col = "#3399ff", lwd = 2)
+  
+  
+  # Test de normalidad
+  library(nortest)
+  if (n < 30){
+    normalidad_shapiro <- shapiro.test(errores) # Para n ≤ 30
+    d[16] = shapiro.pavlor <- normalidad_shapiro$p.value
+    d[17] = "Shap. P valor"
+  } else {
+    normalidad_lillie <- lillie.test(errores)
+    d[16] = lillie.pavalor <- normalidad_lillie$p.value
+    d[17] = "Lillie P valor"
+  }
+  normalidad_anderson <- ad.test(errores)
+  anderson.pvalor <- normalidad_anderson$p.value
+  
+  # Test de correlacion
+  # Pearson 
+  rho1 = correlacion_pearson <- cor(x, y)
+  # Spearman
+  rho2 = correlacion_spearman <- cor(x, y, method = "spearman")
+  
+  # Autocorrelacion de los errores
+  library(lmtest)
+  dwtest(modelo)
+  dw <- dwtest(modelo)$statistic
+  pvalor.dw <- dwtest(modelo)$p.value
+  
+  Datos <- c("α", "β0","β1","S","S^2", "CV", "df","qti","qtd","tc","P valor","Mín. β1","Máx. β1","Prom. err.", "Var. error" , d[17], "Anderson P valor", "Rho Pearson","Rho Spearman","dw")
+  Valores <- c( α , β0 , β1, s ,  scuad  ,  cv ,df, qti , qtd , tc , pvalor, intconfβ1min , intconfβ1max, prom_errores, var_errores, d[16],  anderson.pvalor, rho1, rho2, dw)
+  data.frame(Datos, Valores) %>%
+    kbl(caption = "Informacion del modelo") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_correlacion <- function(x, y, α){
+  d <- c()
+  
+  # Pearson 
+  rho1 = correlacion_pearson <- cor(x, y)
+  if (abs(correlacion_pearson) >= 0.6) {
+    d[1] = "Hay una correlación fuerte"
+  } else if (abs(correlacion_pearson) <= 0.4) {
+    d[1] = "Hay una correlación baja"
+  } else {
+    d[1] = "Hay una correlación media"
+  }
+  # Spearman
+  rho2 = correlacion_spearman <- cor(x, y, method = "spearman")
+  if (abs(correlacion_spearman) >= 0.6) {
+    d[2] = "\nHay una correlación fuerte"
+  } else if (abs(correlacion_spearman) <= 0.4) {
+    d[2] = "\nHay una correlación baja"
+  } else {
+    d[2] =  "\nHay una correlación media"
+  }
+  
+  Datos = c("Pearson", "Spearman")
+  options(scipen = 999)
+  data.frame("Rho" = Datos, "Conclusión" = d) %>%
+    kbl(caption = "Coeficiente de correlación") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+modelo_lineal_inferencia_β1 <-   function(x, y, α){
+  
+  modelo <- lm(y ~ x)
+  d <- c()
+  
+  # Inferencia para β1# H0: β1 = 0 vs H1: β1 ≠ 0
+  df <- summary(modelo)$df[2]
+  # Obtener los cuantiles
+  qtd <- qt(α/2, df, lower.tail = FALSE)
+  # Obtener el estadistico de prueba
+  tc <- summary(modelo)$coefficients["x", "t value"]
+  # Obtener pvalor
+  pvalor <- summary(modelo)$coefficients["x", "Pr(>|t|)"]
+  
+  # Prueba de hipotesis para β1
+  if( abs(tc) > qtd ){
+    d[1] = "Rechazamos H0. β1 ≠ 0"} 
+  else {
+    d[1] = "No hay evidencia suficiente para rechazar H0"}
+  
+  if(2*pvalor < α){
+    d[2] = "Rechazamos H0. β1 ≠ 0"}
+  else{
+    d[2] = "No hay evidencia suficiente para rechazar H0"}
+  
+  D <- c("tc", "p valor")
+  
+  options(scipen = 999)
+  data.frame("Prueba de hipótesis" = D, "Conclusión" = d) %>%
+    kbl(caption = "Inferencia para β1      H0: β1 = 0 vs H1: β1 ≠ 0") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_analisis_residuales <-  function(x, y, α){
+  D <- c()
+  d <- c()
+  # Análisis de residudales
+  n <- length(x)
+  
+  modelo <- lm(y ~ x)
+  errores <- summary(modelo)$residuals
+  
+  # Test de normalidad
+  library(nortest)
+  
+  if (n < 30){
+    D[1] = "Normalidad Shapiro"
+    normalidad_shapiro <- shapiro.test(errores) # Para n ≤ 30
+    if (normalidad_shapiro$p.value >= α) {
+      d[1] = "pvalor ≥ α, no rechazamos H0"
+    } else {
+      d[1] = "pvalor < α, rechazamos H0. No son normales"
+    }
+  } else {
+    D[1] = "Normalidad Lillie"
+    normalidad_lillie <- lillie.test(errores)
+    lillie.pavalor <- normalidad_lillie$p.value
+    if (lillie.pavalor >= α) {
+      d[1] = "pvalor ≥ α, no rechazamos H0"
+    } else {
+      d[1] = "pvalor < α, rechazamos H0. No son normales"
+    }
+  }
+  
+  # Anderson
+  D[2] = "Normalidad Anderson"
+  normalidad_anderson <- ad.test(errores)
+  anderson.pvalor <- normalidad_anderson$p.value
+  if (normalidad_anderson$p.value >= α) {
+    d[2] = "pvalor ≥ α, no rechazamos H0"
+  } else {
+    d[2] = "pvalor < α, rechazamos H0. No son normales"
+  }
+  
+  options(scipen = 999)
+  data.frame("Test de normalidad" = D, "Valor" = d) %>%
+    kbl(caption = "Test de normalidad \nH0: Los datos son normales vs H1: Los datos no son normales") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+modelo_lineal_autocorrelacion_errores <-  function(x, y, α){
+  modelo <- lm(y ~ x)
+  d <- c()
+  # Autocorrelacion de los errores
+  library(lmtest)
+  dwtest(modelo)
+  dw <- dwtest(modelo)$statistic
+  pvalor.dw <- dwtest(modelo)$p.value
+  
+  if (dw <= 1){
+    d[1] <- "Hay una correlación positiva en los residuos"
+  } else if (dw >= 3) {
+    d[1] <- "Hay una correlación negativa en los residuos"
+  } else {
+    d[1] <- "No hay una correlación en los residuos"
+  }
+  
+  Datos <- c("dw")
+  
+  options(scipen = 999)
+  data.frame("Test" = Datos, "Conclusión" = d) %>%
+    kbl(caption = "Test Durbin-Watson") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+```
+
+```{r message = FALSE, echo = FALSE}
+library(tidyverse)
+data <- read_csv("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Bases de datos/Lungcap/lungcap.csv")
+dataf <- data %>% filter(Smoke == 1)
+datanf <- data %>% filter(Smoke == 0)
+moda <- function(x) {
+  return(as.numeric(names(which.max(table(x)))))
+}
+```
+
+Para el caso general, donde se opta por juntar ambos grupos sin diferencia, tenemos los siguientes datos estadísticos, donde podemos observar que las personas que fueron parte de esta muestra van desde los 3 hasta los 19 años de edad con un promedio de 10 años y misma mediana, además, la edad que más se repite es de 9 años y además su varianza no difiere mucho de la media.
+
+```{r echo = FALSE}
+de <- c("Mínimo", "Primer cuantil", "Mediana", "Media", "Tercer cuantil", "Máximo", "Moda", "Varianza", "Desviacion estándar")
+m <- c(summary(data$Age),moda(data$Age),var(data$Age), sd(data$Age))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl(caption = "Edad ") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+```
+
+Para el caso del FEV, el mínimo es de 0.8 redondeado con un máximo de 3.8, y la media de este índice es de 2.6 con una varianza mucho más pequeña que la media en términos unitarios y porcentuales. Esta variable de FEV corresponderá a la variable de respuesta, pues se cree que el FEV va a depender de la edad de la persona en cuestión pero igualmente de si es fumador o no, pero esos datos se desglorazán a continuación.
+
+```{r echo=FALSE}
+m <- c(summary(data$FEV),moda(data$FEV),var(data$FEV), sd(data$FEV))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl() %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+```
+
+Para el casode los fumadores, estos inician a partir de la edad de 9 años y termina en el mismo rango que los datos en conjunto, siendo 19 con un promedio de 14 años pero con 13 años como la cifra más repetida. Y a pesar de no ser mostrado, el porcentaje de fumadores dentro de la base corresponde a 10%. 
+
+```{r echo = FALSE}
+m <- c(summary(dataf$Age),moda(dataf$Age),var(dataf$Age), sd(dataf$Age))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl() %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+```
+
+Para el caso del índice FEV, el mínimo corresponde a 1.7 mientras que el máximo a 4.8, teniendo una media por encima de los datos totales sin embargo una varianza menor.
+
+```{r echo=FALSE}
+m <- c(summary(dataf$FEV),moda(dataf$FEV),var(dataf$FEV), sd(dataf$FEV))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl() %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+```
+
+Ahora para el caso de los no fumadores, la edad más pequeña registrada es de 3 años, mientras que la máxima de igual manera corresponde a la máxima conjunta, en este caso, la media es menor, de 9 años al igual que su moda y mediana. Estos datos tienen una mayor varianza que los fumadores pero menor a la conjunta.
+
+```{r echo = FALSE}
+m <- c(summary(datanf$Age),moda(datanf$Age),var(datanf$Age), sd(datanf$Age))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl() %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+```
+
+En el caso del índice FEV, se registró un mínimo de 0.8 y un máximo de 5.8. mayor que el caso de los fumadores. Sin embargo, los demás valores parecen ser más pequeños que los datos de fumadores, por lo que analizarlo de esta manera en conjunto y de dos grupos podrá determinar si el fumar tiene alguna consecuencia en este índice al igual que la edad. 
+
+```{r echo = FALSE}
+m <- c(summary(datanf$FEV),moda(datanf$FEV),var(datanf$FEV), sd(datanf$FEV))
+m = round(m,3)
+data.frame("Datos estadísticos" = de, "Valores" = m) %>%
+    kbl() %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+```
+
+```{r echo = FALSE}
+f <- data %>%
+  filter(Smoke == 1) %>%
+  group_by(Age)
+nf <- data %>%
+  filter(Smoke == 0) %>%
+  group_by(Age)
+```
+
+Entonces, para un mejor análisis, a partir de este momento, los datos serán seccionados en dos grupos: fumadores y no fumadores. En el primer caso, tendremos los siguientes histogramas y boxplot para el caso de las edades y su índice FEV. Visualmente no observamos ningún outlier en los datos, y no parece haber un comportamiento similar a una distribución normal.
+
+<center>
+```{r echo = FALSE}
+par(mfrow = c(2, 2))
+boxplot(f$Age, col = "#004C99", border = "#003366", xlab = "Edad",  ylab = "Frecuencia")
+hist(f$Age, col = "#003366", border = "white", xlab = "Edad", main = "", breaks = 10)
+boxplot(f$FEV, col = "#004C99", border = "#003366", xlab = "FEV",  ylab = "Frecuencia")
+hist(f$FEV, col = "#003366", border = "white", xlab = "FEV", main = "", breaks = 20)
+par(mfrow = c(1, 1))
+```
+</center>
+
+<center>
+```{r echo = FALSE}
+plot(f$Age,f$FEV, col = "#004C99", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión Edad v.s. FEV")
+plot(f$Age,f$FEV, col = "#003366", lwd = 1,  cex = 0.5, xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Recta de regresión",
+abline( lm( f$FEV ~ f$Age ), col = "#004C99", lwd = 3) )
+```
+</center>
+
+Como podemos observar, la recta de regresión pasa casi al centro de la nube de puntos dispersos, dicha relación puede ser vista de manera más fácil a través de un gráfico de dispersión donde incluyamos el FEV promedio por edad, el cuál es una medida más precisa para poder describir el impacto de la edad sobre este índice, podemos observarlo a continuación:
+
+```{r echo = FALSE}
+f <- data %>%
+  filter(Smoke == 1) %>%
+  group_by(Age) %>%
+  summarise(mean_fev = mean(FEV))
+```
+
+<center>
+```{r echo = FALSE}
+plot(f$Age,f$mean_fev, col = "#004C99", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión Edad v.s. FEV promedio")
+```
+</center>
+
+De esta otra manera, con el manejo del promedio de FEV por edad, se puede observar intuitivamente de una mejor manera la forma de la recta de regresión, pudiendo suponer que tiene relación positiva y con una pendiente menor a 1. Además podemos observar un posible outlier a la edad de 9 años, por lo que realizaremos de nuevo un boxplot para su análisis.
+
+<center>
+```{r echo = FALSE}
+boxplot(f$mean_fev, col = "#004C99", border = "#003366", xlab = "FEV",  ylab = "Frecuencia")
+```
+</center>
+
+Aquí podemos observar dos outliers en los datos al sacar su FEV promedio respecto a su edad, sin embargo, podemos ver menos dispersos los datos para una mejor aproximación líneal que minimice la distancia entre todos los puntos y por ende los errores totales, esto se verá a continuación:
+
+<center>
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+modelo_lineal_datos(f$Age, f$mean_fev,0.05)
+```
+</center>
+
+<center>
+```{r echo = FALSE}
+modelo_lineal_inferencia_β1(f$Age, f$mean_fev,0.05)
+modelo_lineal_correlacion(f$Age, f$mean_fev,0.05)
+modelo_lineal_analisis_residuales(f$Age, f$mean_fev,0.05)
+modelo_lineal_autocorrelacion_errores(f$Age, f$mean_fev,0.05)
+```
+</center>
+
+Para el caso de los no fumadores, tendremos muchos más outliers para casos de la edad como del FEV, esto podría ser esperado al saber que la mayoría de los datos se concentra en este grupo de no fumadores. Lo que sí podemos observar es que en el histograma ambos datos parecen tener un sesgo a la derecha.
+
+<center>
+```{r echo = FALSE}
+par(mfrow = c(2, 2))
+boxplot(nf$Age, col = "#004C99", border = "#003366", xlab = "Edad",  ylab = "Frecuencia")
+hist(nf$Age, col = "#003366", border = "white", xlab = "Edad", main = "", breaks = 10)
+boxplot(nf$FEV, col = "#004C99", border = "#003366", xlab = "FEV",  ylab = "Frecuencia")
+hist(nf$FEV, col = "#003366", border = "white", xlab = "FEV", main = "", breaks = 20)
+par(mfrow = c(1, 1))
+```
+</center>
+
+De igual manera que para el caso anterior, los datos están bastantes dispersos y si bien la gráfica de la línea de regresión se encuentra en un punto medio de la nube de puntos, para que sea mejor aproximada, se sacará el promedio del índice por edad y así se obtendrá un número de puntos según el número de edades.
+
+<center>
+```{r echo = FALSE}
+plot(nf$Age,nf$FEV, col = "#004C99", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión Edad v.s. FEV")
+plot(nf$Age,nf$FEV, col = "#003366", lwd = 1,  cex = 0.5, xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Recta de regresión",
+abline( lm( nf$FEV ~ nf$Age ), col = "#004C99", lwd = 3) )
+```
+</center>
+
+```{r echo = FALSE}
+nf <- data %>%
+  filter(Smoke == 0) %>%
+  group_by(Age) %>%
+  summarise(mean_fev = mean(FEV))
+```
+
+Aquí los puntos se encuentran mucho mejor posicionados para una mejor interpretación gráfica donde sí vemos una relación positiva entre las variables, incluso de mejor manera que el caso anterior.
+
+<center>
+```{r echo = FALSE}
+plot(nf$Age,nf$mean_fev, col = "#004C99", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión Edad v.s. FEV")
+```
+</center>
+
+Al tener un entorno mucho más limpio, el análisis es más sencillo y podemos observar que estos datos se comportan mucho más como la línea de regresión a excepción de dos puntos, lo que podría indicar que los errores de este modelo podrían ser menores que el anterior y sugiriendo que el fumar pueda alterar los resultados normales a los que se debería de comportar el índice FEV según la edad.
+
+<center>
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+modelo_lineal_datos(nf$Age, nf$mean_fev,0.05)
+```
+</center>
+
+
+<center>
+```{r echo = FALSE}
+modelo_lineal_inferencia_β1(nf$Age, nf$mean_fev,0.05)
+modelo_lineal_correlacion(nf$Age, nf$mean_fev,0.05)
+modelo_lineal_analisis_residuales(nf$Age, nf$mean_fev,0.05)
+modelo_lineal_autocorrelacion_errores(nf$Age, nf$mean_fev,0.05)

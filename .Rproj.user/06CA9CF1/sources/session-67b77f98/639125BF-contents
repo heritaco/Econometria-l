@@ -1,0 +1,444 @@
+# Alt - pone flecha 
+# Ctrl Shift C comenta lo seleccionado
+
+
+
+######################
+# Declarar variables #
+######################
+
+x <- c(39, 43,  21, 64, 57, 47, 28, 75, 34, 52) # Variable predictora
+x
+
+y <- c(65, 78,  52, 82, 92, 89, 73, 98, 56, 75) # Variable de predicción
+y
+
+# Número de elementos
+n <- length(x) # Cuenta los elementos de x
+n
+
+# Promedio de x
+xprom <- mean(x) 
+xprom
+
+# Promedio de y
+yprom <- mean(y)
+yprom
+
+
+###############################################
+# Estimadores de mínimos cuadrados de β0 y β1 #
+###############################################
+
+# Suma de los productos cruzados
+SCxy <- sum(x * y)  -  n * xprom * yprom # Multiplicación de vectores
+SCxy
+
+# Suma de los cuadrados de la variable predictora
+SCx  <- sum(x^2)  -  n * xprom^2     # Así cada entrada se eleva al cuadrado
+SCx
+
+# Suma de los cuadrados de la variable de respuesta
+SCy  <- sum(y^2)  -  n * yprom^2
+SCy
+
+# Pendiente
+β1 <- SCxy / SCx # β1 representa el coeficiente de la variable predictora en un modelo de regresión lineal
+
+# Intersección 
+β0 <- yprom  -  β1*xprom
+
+recta <- β0  +  β1*x 
+
+plot(x, y, col = "#780000", pch = 20, lwd = 3, 
+     xlab = "Calificación de matemáticas", 
+     ylab = "Calificación de cálculo",
+     main = "Regresión lineal de calificaciones") 
+    # plot(grafica lo del eje de las x, lo de las y, color, pch les cambia la forma, lwd que tan grueso es, 
+    # alpha ϵ (0.1), xlab etiqueta x, ylab etiqueta y, main = "titulo")
+    abline(b = β1, a = β0, lwd = 3, col = "#c1121f") # Hace la recta
+
+
+    
+####################################################
+# Función lm: Ajusta un modelo de regresión lineal #
+####################################################
+
+plot(x, y, col = "#003049", pch = 16, lwd = 3,
+     xlab = "Calificación de matemáticas", 
+     ylab = "Calificación de cálculo",
+     main = "Regresión lineal con función lm()",
+     abline(lm(y ~ x), col = "#669bbc", lwd = 3))
+            # lm(variable de respuesta ~ variable predictora)
+
+model <- lm(y~x) # Crea un modelo de regresión lineal usando lm()
+model
+
+summary(model) 
+aov(model) # Análisis de varianza
+
+
+
+###################################
+# Estimación de Sigma cuadrada σ^2#
+###################################
+
+# Sum of Squares of Errors
+SSE <- SCy  -  β1 * SCxy
+SSE
+
+# Degrees of freedomm
+df <- n - 2 # Como estamos estimando dos parámetros, son -2 df
+df
+
+# Varianza
+Scuad <- SSE / df
+Scuad # Varianza de los errores, o residual estandar al cuadrado, está en el summary
+
+# Desviación estándar
+S <- sqrt(Scuad)
+S # S es la desviación estándar de los residuos del modelo
+
+
+
+#############################
+# Coefeiciente de variación #
+#############################
+
+# Coeficiente de variación
+CV <- 100 * S / yprom
+CV # Se espera que sea menor o igual a 10%
+
+
+
+#######################
+# Inferencia sobre β1 #
+#######################
+
+#H0: β1 = 0 vs H1: β1 ≠ 0
+
+α <-  0.05 # Casi siempre queremos estimar este alpha
+
+     # qt(probabilidad, grados de libertad, del lado izquierdo)
+qti <- qt(α/2, df, lower.tai = TRUE) # quantil tstudent izquierdo
+qti
+
+qtd <- qt(α/2, df, lower.tai = FALSE)
+qtd
+
+
+
+###############################
+# Prueba de hipotesis para β1 #
+###############################
+
+tc <- β1 / ( S / sqrt(SCx) )
+tc # Valor estadístico de t
+# El modelo no es independiente
+
+pvalor <- 2 * pt( -abs(tc), df) # Se multiplica por 2 debido a que se está realizando una prueba de dos colas
+# La función pt() calcula la probabilidad acumulada en la distribución
+# pt(Abs es el valor absoluto( de tc ), sus df )
+pvalor # Lo vamos a comparar con α
+
+
+
+#####################
+# Region de rechazo #
+#####################
+
+if(abs(tc) > qtd){
+  cat("Rechazamos H0, β1 ≠ 0\n", β1, "≠ 0")
+  }else{
+  print("No existe evidencia para rechazar H0")
+  }
+
+if(pvalor < α){
+  cat("Rechazamos H0, β1 ≠ 0\n", β1, "≠ 0")
+}else{
+  print("No existe evidencia para rechazar H0")
+}
+
+
+
+##################################
+# Intervalo de confianza para β1 #
+##################################
+
+# Límite superior
+limsup <- β1  +  qtd * S / sqrt(SCx)
+limsup                 # Residual standar error
+
+# Límite inferior
+liminf <- β1  -  qtd * S / sqrt(SCx) 
+liminf
+
+
+
+##############################
+# Coeficiente de correlación #
+##############################
+
+r <- SCxy / sqrt( SCx * SCy )
+r
+
+cor(x, y)
+
+# En el summary esta al cuadrado
+# 0-4 Baja, 4-6 Media, 6-10 Alta
+
+
+
+################################
+# Coeficiente de determinación #
+################################
+
+cor(x, y)^2
+
+r2 = 1  -  SSE / SCy
+r2
+
+# Adjusted r cuadrada es el coeficiente de determinacion  
+
+###########################
+# Error estándar de yprom #
+###########################
+
+erroryprom <- S * sqrt( (1/n)  +  (x - xprom)^2 / SCx ) 
+erroryprom
+
+
+
+###################################
+# Error estándar de la predicción #
+###################################
+
+errorpredic <- S * sqrt( 1  +  (1/n)  +  (x - xprom)^2 / SCx ) 
+errorpredic
+
+
+
+###########################
+# Intervalos de confianza #
+###########################
+
+
+# Límite inferior error estándar del promedio de y
+lieeyprom <- recta  -  qtd * erroryprom
+lieeyprom
+
+# Límite superior error estándar del promedio de y
+lseeyprom <- recta  +  qtd * erroryprom
+lseeyprom # Es una curva de promedio de errores
+
+
+# Límite inferior del error estándar de la predicción
+lieepredic <- recta  -  qtd * errorpredic
+lieepredic
+
+# Límite superior del error estándar de la predicción
+lseepredic <- recta  +  qtd * errorpredic
+lseepredic # Es el error de todos los puntos
+
+plot(x, y, col = "#3b1f2b", lwd = 2, pch = 16,
+     xlab = "Calificación de matemáticas", 
+     ylab = "Calificación de cálculo",
+     main = "Intervalos de confianza") # grafica los puntos
+     abline (a = β0, b = β1, col = "#ff5a5f", lwd = 2) # graica la recta
+     lines (x = sort(x),  y = sort(lieeyprom),  col="#ff4d00",  lty = 2, lwd = 2) # sort ordena de mas pequeño a mas grande
+     lines (x = sort(x),  y = sort(lseeyprom),  col="#ff4d00",  lty = 2, lwd = 2)
+     lines (x = sort(x),  y = sort(lieepredic),  col="#ffd100",  lty = 2, lwd = 2)
+     lines (x = sort(x),  y = sort(lseepredic),  col="#ffd100",  lty = 2, lwd = 2)
+
+
+
+##########################
+# Analisis de residuales #
+##########################
+
+error <- y - recta # Para cada punto, estoy midiendo la distancia a la recta
+error
+
+plot(error, col="#0d47a1", type = "o",lwd = 2, pch = 16,
+     xlab = "Índice de Observación",
+     ylab = "Valor de Error",
+     main = "Gráfico de Errores")
+     lines(1:n, rep(0,n), col="#df3e3e", lwd = 2)# 1:n es una secuencia, empieza en 1, termina en n
+# Los errores se distribuyen N(0, Sigma ^2 )
+# Se espera que todos esten cercanos de 0 cuando se suman
+
+mean(error) # El error es muy pequeño, eso es bueno
+var(error)  # Si puedes "encerrar" los puntos entre dos rectas, puede ser que tenga varianza constante
+# Si la recta que encierra a los puntos tiene pendiente, entonces no hay varianza constante
+
+hist(error, col = "#415a77", border = "white",
+     main = "Histograma de Errores", 
+     xlab = "Errores", ylab = "Frecuencia")
+# Se espera que sea normal
+boxplot(error, main = "Boxplot", col = "#588157", medcol = "#344e41", border = "#344e41")
+
+qqnorm(error, col = "#ad2831", lwd = 2, pch = 16,
+       main = "Gráfico QQ de Errores", 
+       xlab = "Cuantiles teóricos", 
+       ylab = "Cuantiles de los errores") # Enseña los deciles
+       qqline(error, col = "#640d14", lwd = 2) # La línea recta representa los cuantiles que tendria una normal estandar
+
+
+
+########################
+# Prueba de normalidad #
+########################
+
+
+# H0: los datos son normales  vs  H1: los datos NO son normales
+
+
+# Shapiro #
+normalidad_shapiro <- shapiro.test(error) # Para n ≤ 30
+normalidad_shapiro
+  if (normalidad_shapiro$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+        y no hay evidencia que garantice que NO son normales\n",
+        normalidad_shapiro$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_shapiro$p.value, "<", α)
+  }
+
+
+# Anderson-Darling #
+install.packages("nortest")
+library(nortest)
+normalidad_anderson <- ad.test(error) #siempre nos quedamos con el p-valor que sea más grande, para que sea más contuntente rechazar
+normalidad_anderson
+  if (normalidad_anderson$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+          y no hay evidencia que garantice que NO son normales\n",
+        normalidad_anderson$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_anderson$p.value, "<", α)
+  }
+
+
+# Lilline # 
+normalidad_lilline <- lillie.test(error) # Para n ≥ 30
+normalidad_lilline
+  if (normalidad_lilline$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+          y no hay evidencia que garantice que NO son normales\n",
+        normalidad_lilline$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_lilline$p.value, "<", α)
+  }
+
+
+# Kolmogorov Smirnov #
+normalidad_kolmogorov <- ks.test(error, "pnorm")
+normalidad_kolmogorov
+  if (normalidad_kolmogorov$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+          y no hay evidencia que garantice que NO son normales\n",
+        normalidad_kolmogorov$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_kolmogorov$p.value, "<", α)
+  }
+
+
+# Cramer #
+normalidad_cramer <- cvm.test(error) # Para n ≤ 30
+normalidad_cramer
+  if (normalidad_cramer$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+          y no hay evidencia que garantice que NO son normales\n",
+        normalidad_cramer$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_cramer$p.value, "<", α)
+  }
+
+
+
+# Jarque-Bera #
+install.packages("tseries")
+library(tseries)
+normalidad_jarque.bera <- jarque.bera.test(error)
+normalidad_jarque.bera
+  if (normalidad_jarque.bera$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales),
+          y no hay evidencia que garantice que NO son normales\n",
+        normalidad_jarque.bera$p.value, "≥", α) # A lo mejor los datos son normales
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales\n", 
+        normalidad_jarque.bera$p.value, "<", α)
+  }
+
+
+
+###########################
+# Prueba de independencia #
+###########################
+
+tabla_contingencia <- table(x, y)
+
+# Chi-cuadrado χ #
+independencia_chi_cuadrada <- chisq.test(tabla_contingencia) 
+independencia_chi_cuadrada
+
+  if (independencia_chi_cuadrada$p.value < α) {
+    cat("Las variables no son independientes pvalor < α\n",
+        independencia_chi_cuadrada$p.value, "<", α)
+  } else {
+    cat(" pvalor > α, No hay evidencia para decir que no son independientes \n", 
+        independencia_chi_cuadrada$p.value, ">", α)
+  }
+
+
+# Fisher #
+independencia_fisher <- fisher.test(tabla_contingencia)
+independencia_fisher
+  
+  if (independencia_fisher$p.value < α) {
+    cat("Las variables no son independientes pvalor < α\n", 
+        independencia_fisher$p.value, "<", α)
+  } else {
+    cat(" pvalor > α, No hay evidencia para decir que no son independientes \n", 
+        independencia_fisher$p.value, ">", α)
+  }
+
+
+
+#########################
+# Prueba de correlación #
+#########################
+
+
+# Pearson #
+correlacion_pearson <- cor(x, y)
+  
+  if (abs(correlacion_pearson) >= 0.6) {
+    mensaje <- "Hay una correlación fuerte,"
+  } else if (abs(correlacion_pearson) <= 0.4) {
+    mensaje <- "Hay una correlación baja,"
+  } else {
+    mensaje <- "Hay una correlación media,"
+  }
+  
+  cat(mensaje, "coeficiente de correlación de Pearson:", correlacion_pearson)
+
+
+# Spearman #
+correlacion_spearman <- cor(x, y, method = "spearman")
+
+  if (abs(correlacion_spearman) >= 0.6) {
+    mensaje <- "Hay una correlación fuerte,"
+  } else if (abs(correlacion_spearman) <= 0.4) {
+    mensaje <- "Hay una correlación baja,"
+  } else {
+    mensaje <- "Hay una correlación media,"
+  }
+  
+  cat(mensaje, "coeficiente de correlación de Spearman:", correlacion_spearman)
+  

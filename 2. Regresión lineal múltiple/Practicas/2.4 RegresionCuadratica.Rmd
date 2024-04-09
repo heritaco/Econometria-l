@@ -1,0 +1,144 @@
+---
+output: html_document
+---
+
+<center>
+# Regresión cuadrática - Econometría I
+#### Agustin Riquelme y Heriberto Espino
+</center>
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+</n>
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(readxl)
+library(ggplot2)
+library(MASS)
+library(ISLR2)
+library(PerformanceAnalytics)
+library(lmtest)
+library(nortest)
+```
+
+La base que se usará para este trabajo será la del sistema inmune. como podemos observar, que existen dos distintas variables, una corresponde a la máxima oxigenación en sangre (MaxOxygen) y otra corresponde al número de Inmunoglobina tipo G. Para este caso la máxima oxigenación se usará como variable de respuesta y el número de Inmunoglobina G como variable predictora
+
+<center>
+```{r echo=FALSE}
+library(readxl)
+SI <- read_excel("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Bases de datos/SistemaInmune.xlsx")
+
+x <- SI$IgG
+y <- SI$MaxOxygen
+head(SI)
+```
+</center>
+
+Podemos observar con nuestro gráfico de puntos que el modelo parece no ser lineal por completo, sino se asemeja más a una función exponencial que va creciendo más conforme aumenta el nivel de Inmunoglobina tipo G en sangre, de todas maneras se va a desarrollar un modelo líneal para ver las diferencias entre sí
+
+<center>
+```{r}
+ggplot(SI, aes(x=IgG, y=MaxOxygen)) +
+  geom_point()
+```
+</center>
+
+#### 1. Modelo Lineal Simple
+
+Primero se realizará un modelo de regresión lineal simple, donde se usarán las variables de la misma manera que hemos trabajado todo el tiempo, podemos observar en dicho modelo que la variable es significativa, tanto la beta 1 como la 0 son variables que con un nivel significativas en un nivel de 0.05 y el modelo en general igual obtiene dicha calificación, pues su $R^2$ tanto normal como ajustada tiene un valor alto, diciendo que el 91% de nuestros datos se ajustan al modelo de manera correcta, además el error estándar es relativamente pequeño por lo que podemos decir que es un buen modelo pero para afirmar que es el mejor para esta base, será necesario compararlo con los otros modelos
+
+```{r}
+mod_lin <- lm(y ~ x)
+summary(mod_lin)
+```
+
+A través de la prueba de normalidad Shapiro-Wilks podemos observar que se tiene un p valor muy alto, es decir, que aceptamos la hipótesis nula de que los residuos se comportan normalmente con un nivel de significacia de 0.05. Además con el test de Durbin-Watson podemos observar que de igual manera el p valor es muy alto, por lo que aceptamos la hipótesis nula y decimos que no existe correlación entre los residuos
+
+```{r}
+shapiro.test(mod_lin$residuals)
+```
+
+```{r}
+dwtest(mod_lin)
+```
+
+Y finalmente, hacemos sacamos el valor del valor de Aikake para poder comparar qué modelo es mejor, en este caso tenemos un valor de 166.5 que resulta alto
+
+```{r}
+AIC(mod_lin)
+```
+
+#### 2. Modelo Cuadrático Simple
+
+Ahora realizaremos un modelo cuadrático para ver los cambios que se pueden observar en comparación con el modelo de regresión lineal simple. Principalmente podemos observar que el valor de nuestra $R^2$ aumentó a 92%, es decir, que 1% más de los datos se ajusta a nuestro modelo. De igual manera el error residual estándar es más pequeño que el anterior y los p valores de tanto beta 1 como beta 0, son mucho más significativos que el modelo pasado
+
+```{r}
+mod_cuad <- lm(y ~ I(x^2))
+summary(mod_cuad)
+```
+
+Además podemos observar que con un valor más significativo, los residuos se comportan de manera normal con la prueba Shapiro-Wilk. Sin embargo, para el caso del test de Durbin-Watson, sí aceptamos la hipótesis nula pero con un nivel menos significativo
+
+```{r}
+shapiro.test(mod_cuad$residuals)
+```
+
+```{r}
+dwtest(mod_cuad)
+```
+
+Con todo esto, comparado con el modelo anterior, el valor de Aikake resulta más bajo
+
+```{r}
+AIC(mod_cuad)
+```
+
+#### 3. Modelo Cuadrático Completo
+
+Para el modelo cuadrático completo podemos observar que el modelo resulta más significativo a pesar de ajustarse a los datos de manera similar al modelo anterior, sin embargo las betas resultan ser menos significativas e incluso nuestra beta 1 puede ser removida del modelo al no aportar mucha significancia
+
+```{r}
+mod_cuadcom <- lm(y ~ x + I(x^2))
+summary(mod_cuadcom)
+```
+
+Comparado con el modelo anterior, los residuos se comportan de manera similar, tanto en la prueba de normalidad como en la correlación entre ellos, así podemos afirmar que se comportan de manera normal y los residuos no tienen correlación entre sí
+
+```{r}
+shapiro.test(mod_cuadcom$residuals)
+```
+
+```{r}
+dwtest(mod_cuadcom)
+```
+
+Este modelo tiene un valor de Aikake más alto que el anterior, sin embargo, resulta de igual manera más bajo que el modelo de regresión lineal
+
+```{r}
+AIC(mod_cuadcom)
+```
+
+#### 4. Modelo Polinomial
+
+Ahora para el caso del modelo polinomial, podemos observar que se ajustan los datos de manera similar al modelo anterior al respresentar al 92% de los datos con el modelo, sin embargo podemos observar que la beta 3 puede ser removida del modelo al no resultar tan significativa. Y respecto al error estándar en los residuos, es mayor que en los modelos cuadráticos pero menor que en lineal simple
+
+```{r}
+mod_pol <- lm(y ~ poly(x,3))
+summary(mod_pol)
+```
+
+A su vez podemos decir que los errores se comportan de manera normal al no obtener un p valor significativo en la prueba de Shapiro-Wilks y afirmar que no existe una correlación entre los residuos por el test de Durbin-Watson
+
+```{r}
+shapiro.test(mod_pol$residuals)
+```
+
+```{r}
+dwtest(mod_pol)
+```
+
+Finalmente el valor de Aikake de este último modelo es más grande que los anteriores pero aún así menor que el caso del modelo lineal. Sin embargo, este modelo podría resultar mejor ya que su criterio a pesar de ser más bajo que el del modelo lineal, es mucho mejor que los cuadráticos, y sabiendo que dicho criterio penaliza a aquellos modelos complejos a favor de los sencillos para evitar un sobreajuste, podemos decir que este modelo resulta más significativo y tiene mucha mejor confianza.
+
+```{r}
+AIC(mod_pol)
+```

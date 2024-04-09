@@ -1,0 +1,30 @@
+my_lm <- function(x, y) {
+  
+  n <- length(x)
+  xprom <- mean(x)
+  yprom <- mean(y)
+  
+  SCxy <- sum(x * y) - n * xprom * yprom
+  SCx <- sum(x^2) - n * xprom^2
+  SCy <- sum(y^2) - n * yprom^2
+  
+  b1 <- SCxy / SCx
+  b0 <- yprom - b1 * xprom
+  
+  residuals <- y - (b0 + b1 * x)
+  
+  model <- list(coefficients = c(b0, b1),
+                residuals = residuals,
+                fitted.values = b0 + b1 * x,
+                df = c(1, n - 2),
+                call = match.call())
+  
+  class(model) <- "lm"
+  return(model)
+}
+
+x <- c(39, 43, 21, 64, 57, 47, 28, 75, 34, 52)
+y <- c(65, 78, 52, 82, 92, 89, 73, 98, 56, 75)
+
+my_model <- my_lm(x, y)
+summary(my_model)

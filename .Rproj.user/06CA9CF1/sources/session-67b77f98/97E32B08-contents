@@ -1,0 +1,23 @@
+}# Instala y carga la librería 'colorRamps' si aún no está instalada
+if (!requireNamespace("colorRamps", quietly = TRUE)) {
+  install.packages("colorRamps")
+}
+library(colorRamps)
+
+# Genera datos de ejemplo
+set.seed(123)
+error <- rnorm(100)
+
+# Crea una paleta de colores gradual (de verde a amarillo)
+gradient_palette <- colorRampPalette(c("green", "yellow"))
+
+# Genera una secuencia de colores utilizando la paleta gradual
+num_colors <- length(error)
+colors <- gradient_palette(num_colors)
+
+# Crea el boxplot con colores graduales
+boxplot(error, main = "Boxplot con Colores Gradientes", col = colors)
+
+# Agrega título y etiquetas a los ejes
+title(main = "Boxplot con Colores Gradientes", xlab = "Grupos", ylab = "Valores")
+

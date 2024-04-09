@@ -1,0 +1,3 @@
+"0","    #plot(grafica lo del eje de las x, lo de las y, color, pch les cambia la forma, lwd que tan grueso es, "
+"0","    #alpha e (0.1), xlab etiqueta x, ylab etiqueta y, main = ""titulo"")"
+"0","abline(b = b1, a = b0, lwd = 3, col = ""skyblue"") #te hace la rec"
