@@ -1,0 +1,15 @@
+---
+title: "My R Markdown Document"
+author: "Your Name"
+date: "Today's Date"
+output: html_document
+---
+
+# Introduction
+
+This is an example R Markdown document. You can write your content here using Markdown syntax.
+
+## Code Chunk
+
+You can also include R code chunks and display their output:
+

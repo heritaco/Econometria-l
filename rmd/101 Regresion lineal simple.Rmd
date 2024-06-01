@@ -11,7 +11,7 @@ Se muestran las calificaciones del examen de matemáticas de 10 estudiantes de p
 
 ```{r echo = FALSE, warning = FALSE}
 # install.packages("DT")
-install.packages("KableExtra")
+i# nstall.packages("KableExtra")
 library(DT)
 library(kableExtra)
   x <- c(39, 43,  21, 64, 57, 47, 28, 75, 34, 52) # Variable predictora
@@ -316,18 +316,3 @@ if (abs(correlacion_spearman) >= 0.6) {
   }
   cat(mensaje, "coeficiente de correlación de Spearman:", correlacion_spearman)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

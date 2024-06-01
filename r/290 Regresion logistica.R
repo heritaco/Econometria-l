@@ -1,3 +1,10 @@
+# Título: Análisis y Predicción de Diabetes con Regresión Logística en R
+# Descripción: Este archivo realiza un análisis exploratorio y visualización de datos con el conjunto de datos 'diabetes.csv'.
+# Se construye un modelo de regresión logística para predecir la presencia de diabetes en pacientes basándose en varias mediciones diagnósticas.
+# Se generan gráficos para visualizar la relación entre las variables y la presencia de diabetes.
+# Se divide el conjunto de datos en un conjunto de entrenamiento y prueba, y se ajusta el modelo al conjunto de entrenamiento.
+# Se evalúa el rendimiento del modelo en el conjunto de prueba utilizando varias métricas, incluyendo precisión, sensibilidad, especificidad, y la tasa de falsos positivos y negativos.
+
 library(ISLR2)
 library(tidyverse)
 library(ggplot2)
@@ -157,5 +164,3 @@ round(tfp, 2)
 # instancias predichas como negativas (TN / (TN + FN)).
 tfn <- tn / (tn + fn) * 100
 round(tfn, 2)
-  
-

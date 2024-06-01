@@ -1,8 +1,6 @@
 # Alt - pone flecha 
 # Ctrl Shift C comenta lo seleccionado
 
-
-
 ######################
 # Declarar variables #
 ######################
@@ -74,7 +72,7 @@ plot(x, y, col = "#003049", pch = 16, lwd = 3,
 model <- lm(y~x) # Crea un modelo de regresión lineal usando lm()
 model
 
-summary(model) 
+summary(model)
 aov(model) # Análisis de varianza
 
 
@@ -92,7 +90,7 @@ df <- n - 2 # Como estamos estimando dos parámetros, son -2 df
 df
 
 # Varianza
-Scuad <- SSE / df
+Scuad <- SSE / (df)
 Scuad # Varianza de los errores, o residual estandar al cuadrado, está en el summary
 
 # Desviación estándar
@@ -207,8 +205,6 @@ r2
 erroryprom <- S * sqrt( (1/n)  +  (x - xprom)^2 / SCx ) 
 erroryprom
 
-
-
 ###################################
 # Error estándar de la predicción #
 ###################################
@@ -288,9 +284,6 @@ qqnorm(error, col = "#ad2831", lwd = 2, pch = 16,
 ########################
 # Prueba de normalidad #
 ########################
-
-
-# H0: los datos son normales  vs  H1: los datos NO son normales
 
 
 # Shapiro #
@@ -381,6 +374,24 @@ normalidad_jarque.bera
 # Prueba de independencia #
 ###########################
 
+# H0: los datos son normales  vs  H1: los datos NO son normales
+# H0: No existe correlación entre los residuos
+# H1 Los residuos estám cprrelacionados
+# 
+# El estadístico de Durbin-Watson toma valores entre 0 y 4
+# Un valor cercano a 2 indica independendencia de los errores
+# Mientras que los vaslores significativamente diferente de 2 pueden
+# indicar autocorrelación positiva o negativa 
+
+# install.packages("lmtest")
+library(lmtest)
+model <- lm(y~x)
+model
+
+summary(model)
+
+dwtest(model)
+
 tabla_contingencia <- table(x, y)
 
 # Chi-cuadrado χ #
@@ -415,7 +426,6 @@ independencia_fisher
 #########################
 
 
-
 # Pearson #
 correlacion_pearson <- cor(x, y)
   
@@ -443,3 +453,38 @@ correlacion_spearman <- cor(x, y, method = "spearman")
   
   cat(mensaje, "coeficiente de correlación de Spearman:", correlacion_spearman)
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+###############
+# Resumen #
+  
+result <- summary(model)
+result  
+
+result$coefficients
+
+result$coefficients["(Intercept)", "Estimate"] # B0
+result$coefficients["(Intercept)", "Std. Error"] # Standar error
+result$coefficients["(Intercept)", "t value"] # 
+result$coefficients["(Intercept)", "Pr(>|t|)"]
+
+result$coefficients["x", "Estimate"] #B1
+result$coefficients["x", "Std. Error"]
+result$coefficients["x", "t value"]
+result$coefficients["x", "Pr(>|t|)"]
+
+result$r.squared
+result$adj.r.squared
+result$fstatistic
+result$sigma
+result$df
+
+
+

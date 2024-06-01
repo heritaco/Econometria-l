@@ -68,5 +68,3 @@ datos <- as.data.frame(matriz)
 # Crear un gráfico de dispersión
 ggplot(data = datos, aes(x = V1, y = V2)) +
   geom_point()
-
-

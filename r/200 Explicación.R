@@ -2,7 +2,7 @@ library(readxl)
 library(lmtest)
 library(nortest)
 
-data = Ejemplo_subasta <- read_excel("Bases de datos/Ejemplo subasta.xlsx")
+data = Ejemplo_subasta <- read_excel("DataFrames/Ejemplo subasta.xlsx")
 
 names(data) # Nombres de las columnas
 head(data) # Muestra los primeros 5 datos

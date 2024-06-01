@@ -3,9 +3,12 @@ library(readxl)
 library(DT)
 library(kableExtra)
 library(readxl)
-
 basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
-data = Ejemplo_subasta <- read_excel("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Ejemplo subasta.xlsx")
+
+# Ruta a la carpeta
+ruta_carpeta <- "C:/Users/herie/OneDrive/Documentos/GitHub/Econometria l/DataFrames/"
+Ejemplo_subasta <- read_excel(paste0(ruta_carpeta, "Ejemplo subasta.xlsx"))
+data = Ejemplo_subasta
 
 # Variables predictoras: Edad, Número de postores Variable de respuesta: Edad
 edad     <- data$Edad

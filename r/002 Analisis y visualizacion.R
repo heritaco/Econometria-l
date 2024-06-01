@@ -1,6 +1,12 @@
-##### 20 de enero
+# Descripción: Este archivo contiene un análisis exploratorio detallado y visualización de datos 
+# utilizando el conjunto de datos 'gapminder'. Se realizan varias operaciones de manipulación de datos, 
+# como filtrado, agrupación y resumen. También se calculan estadísticas descriptivas y se crean varias 
+# visualizaciones, incluyendo gráficos de líneas, puntos, barras, histogramas y boxplots. Además, se 
+# realiza un análisis de correlación y se utilizan etiquetas para categorizar los datos. Finalmente, se 
+# introducen y exploran brevemente los conjuntos de datos 'lungcap' y 'Titanic'.
+
 library(tidyverse)
-install.packages("gapminder")
+# install.packages("gapminder")
 library(gapminder)
 data("gapminder")
 ### ordenar por poblacion 
@@ -91,15 +97,6 @@ gapminder %>%
   filter(year == 2007) %>%
   ggplot(mapping = aes(y = gdpPercap)) +
   geom_boxplot()
-
-
-
-
-
-
-
-
-##### 21 de enero
 
 ### estadisticas
 gapminder %>%
