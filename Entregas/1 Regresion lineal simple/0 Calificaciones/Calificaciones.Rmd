@@ -1,0 +1,320 @@
+---
+title: "Calificaciones"
+author: "Agustin Riquelme y Heriberto Espino"
+date: "2023-08-30"
+output: 
+  html_document:
+    theme: readable
+---
+
+# Regresion lineal simple
+
+Se muestran las calificaciones del examen de matemáticas de 10 estudiantes de primer año de universidad, junto con sus calificaciones finales en cálculo. Se busca encontrar la recta de predicción de mínimos cuadrados para estos datos, creyendo que la calificación de matemáticas puede ser un determinante para la calificación de cálculo
+
+```{r echo = FALSE, warning = FALSE}
+# install.packages("DT")
+# nstall.packages("KableExtra")
+library(DT)
+library(kableExtra)
+  x <- c(39, 43,  21, 64, 57, 47, 28, 75, 34, 52) # Variable predictora
+y <- c(65, 78,  52, 82, 92, 89, 73, 98, 56, 75) # Variable de predicción
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+data.frame("Matemáticas" = x, "Cálculo" = y) %>%
+  kbl(caption = "Tabla de calificaciones") %>%
+  kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+```
+
+Sabemos que nuestra variable dependiente o de respuesta viene siendo la calificación de cálculo, pues buscamos ver si a través de las calificaciones de matemáticas se puede predecir su valor. Mientras que nuestra variable predictora o independiente viene siendo la calificación de matemáticas.
+
+Sabemos que de nuestra muestra de datos, el promedio de ambos conjuntos y su tamaño son los siguientes:
+
+```{r}
+n <- length(x)
+xprom <- mean(x) 
+yprom <- mean(y)
+```
+
+```{r echo = FALSE}
+cat("La longitud de los datos es: ", n)
+cat("El promedio de x es: ", xprom)
+cat("El promedio de y es: ", yprom)
+```
+
+Ahora, para poder realizar el cálculo de los estimadores de mínimos cuadrados para $\hat{\beta}_1$ y $\hat{\beta}_0$, es necesario conocer la suma de cuadrados de los vectores por separado al igual que el producto cruzado, por lo que se realizará una tabla con las estimaciones
+
+```{r}
+SCxy <- sum(x * y)  -  n * xprom * yprom
+SCx  <- sum(x^2)  -  n * xprom^2
+SCy  <- sum(y^2)  -  n * yprom^2
+```
+
+```{r echo = FALSE}
+data.frame("x" = x, "y" = y, "x^2" = SCx, "xy" = SCxy, "y^2" = SCy) %>%
+  kbl(caption = "Tabla de cuadrados") %>%
+  kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+
+data.frame("x" = sum(x), "y" = sum(y), "x^2" = sum(SCx), "xy" = sum(SCxy), "y^2" = sum(SCy)) %>%
+  kbl(caption = "Suma de cuadrados") %>%
+  kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+```
+
+Ahora, con estos datos ya se puede realizar el cálculo de las betas y a su vez crear la recta de regresión, la cual sigue la ecuación de una recta convencional. Donde $\hat{\beta}_1$ representa el coeficiente de la variable predictora en el modelo y $\hat{\beta}_0$ su intersección.
+
+```{r}
+β1 <- SCxy / SCx
+β0 <- yprom  -  β1*xprom
+recta <- β0  +  β1*x 
+```
+
+```{r echo = FALSE}
+cat("La estimación para β1 es: ", β1)
+cat("La estimación para β0 es: ", β0)
+```
+
+```{r echo = FALSE}
+  plot(x, y, col = "#780000", pch = 20, lwd = 3, 
+     xlab = "Calificación de matemáticas", 
+     ylab = "Calificación de cálculo",
+     main = "Regresión lineal de calificaciones")
+    abline(b = β1, a = β0, lwd = 3, col = "#c1121f")
+```
+
+Para la estimación de la varianza será necesario conocer la suma cuadrada de la estimación de los errores al igual que los grados de libertad, pero como estamos estimando dos parámetros, los grados de libertad van a corresponder a $n - 2$
+
+```{r}
+SSE <- SCy  -  β1 * SCxy
+df <- n - 2
+Scuad <- SSE / df
+S <- sqrt(Scuad)
+```
+
+```{r echo = FALSE}
+cat("La estimación para SSE es: ", SSE)
+cat("La estimación para la varianza es: ", Scuad)
+cat("La estimación de la desviación estándar es: ", S)
+```
+
+A su vez podemos realizar la estimación del coeficiente de variación el cual se estima sea menor a 0.1 o bien 10%
+
+```{r}
+CV <- 100 * S / yprom
+```
+
+```{r echo = FALSE}
+cat("El coeficiente de variación es: ", CV)
+```
+
+Ahora para realizar la inferencia sobre $\hat{\beta_1}$ siempre se va a mantener la hipótesis $H_0$ que $\hat{\beta_1}$ y como alternativa que $\hat{\beta_1}$ es diferente de cero. Es decir: $$H_0: \hat{\beta_1} = 0 \quad v.s. \quad H_1: \hat{\beta_1} \neq 0$$
+
+Para ello se usará un nivel de significancia de $\alpha = 0.05$, que suele ser de las más comunes. Con ello se realizará la estimación de la región de rechazo a través de los cuantiles t student de sus colas (prueba de dos colas), y con el módelo que ya creamos, calcularemos el valor p para así determinar si existe evidencia suficiente para rechazar $H_0$
+
+```{r}
+α <-  0.05
+qti <- qt(α/2, df, lower.tai = TRUE)
+qtd <- qt(α/2, df, lower.tai = FALSE)
+tc <- β1 / ( S / sqrt(SCx) )
+pvalor <- 2 * pt( -abs(tc), df)
+```
+
+```{r echo = FALSE}
+cat("El valor estadístico de t es: ", tc)
+cat("El valor p del módelo es: ", pvalor)
+```
+
+Como el valor absoluto del estadístico es mayor que el de la cola derecha, se rechaza la hipótesis nula y a su vez con el p valor, al ser menor que el nivel de significancia, de igual manera la hipótesis nula se rechaza
+
+```{r echo = FALSE}
+if(abs(tc) > qtd){
+  cat("Rechazamos H0, β1 ≠ 0\n", β1, "≠ 0")
+  }else{
+  print("No existe evidencia para rechazar H0")
+  }
+
+if(pvalor < α){
+  cat("Rechazamos H0, β1 ≠ 0\n", β1, "≠ 0")
+}else{
+  print("No existe evidencia para rechazar H0")
+}
+```
+
+Ahora para calcular el intervalo de confianza de se calculará el límite superior para $\hat{\beta_1}$
+
+```{r}
+limsup <- β1  +  qtd * S / sqrt(SCx)
+liminf <- β1  -  qtd * S / sqrt(SCx)
+```
+
+```{r echo = FALSE}
+cat("El límite superior de β1 es: ", limsup)
+cat("El límite inferior de β1 es: ", liminf)
+```
+
+Además para saber si los datos están o no fuertemente relacionadas o no, es decir, cambian simultaneamente, con reacciones opuestas o no tienen ninguna relación alguna nos va a servir observar el coeficiente de correlación que se determina de la siguiente manera:
+
+```{r}
+r <- SCxy / sqrt( SCx * SCy )
+```
+
+```{r echo = FALSE}
+cat("El coeficiente de correlación es:", r)
+```
+
+Un coeficiente alto y cercano a 1 nos indica una relación significativa entre las variables y que si una aumenta, la otra tiene en gran parte el mismo cambio. En caso de ser negativo alto, nos menciona que cuando una aumente, la otra llevará el camino contrario, es decir, disminuirá, en este caso las variables están fuertemente correlacionadas.
+
+Otro dato que nos ayudará a determinar la precisión del modelo, va a ser el coeficiente de determinación, cuyo dominio se encuentra entre 0 y 1, representando el 1 una precisión casi perfecta en el modelo mientras que el 0 no logrará modelar los valores en absoluto. En este caso tenemos un valor alto que dice que nuestro modelo tiene una precisión alta.
+
+```{r}
+r2 = 1  -  SSE / SCy
+```
+
+```{r echo = FALSE}
+cat("El coeficiente de determinación es: ", r2)
+```
+
+A su vez, podemos realizar el cálculo de los errores,tanto del promedio de la variable de respuesta y el de la predicción, a continuación se realizará el cálculo de cada uno de ellos. Entre menores sean dichos errores en promedio, se dice que el modelado será de igual manera más preciso, pues implicará que se suela acercar a los valores reales de la población.
+
+```{r}
+erroryprom <- S * sqrt( (1/n)  +  (x - xprom)^2 / SCx ) 
+errorpredic <- S * sqrt( 1  +  (1/n)  +  (x - xprom)^2 / SCx ) 
+```
+
+```{r}
+cat("El error promedio de la variable de respuesta es: ", erroryprom)
+cat("El error promedio de la predicción es: ", errorpredic)
+```
+
+Analizando los errores igual podremos obtener unas gráficas que nos ayudarán a obtener más datos acerca de estos y de una manera más visual. Primeramente tendremos una gráficad e puntos tradicional donde podremos observar qué tanto se alejan de la recta de regresión y en el historgrama podremos observar qué intervalos de errores se presentan com mayor frecuencia, además se podrían realizar boxplots o gráficos qq pero en esta ocasión creemos que estos dos son los que dan resultados más visuales.
+
+```{r echo = FALSE}
+error <- y - recta
+plot(error, col="#0d47a1", type = "o",lwd = 2, pch = 16,
+     xlab = "Índice de Observación",
+     ylab = "Valor de Error",
+     main = "Gráfico de Errores")
+     lines(1:n, rep(0,n), col="#df3e3e", lwd = 2)
+hist(error, col = "#415a77", border = "white",
+     main = "Histograma de Errores", 
+     xlab = "Errores", ylab = "Frecuencia")
+```
+
+```{r echo = FALSE}
+cat("El error promedio es: ", mean(error))
+```
+
+
+De igual manera tendremos el cálculo de los intervalos de confianza que nos ayudarán a marcar límites los cuales nuestra serie de datos y predicciones no rebasarán, en el segundo caso, los límites abarcarán un espacio más extenso al tratarse de una predicción y ser mucho menos precisos a la hora de realizar las estimaciones. Dichos límites se marcarán en una gráfica a continuación para una mejor apreciación
+
+```{r}
+lieeyprom <- recta  -  qtd * erroryprom
+lseeyprom <- recta  +  qtd * erroryprom
+lieepredic <- recta  -  qtd * errorpredic
+lseepredic <- recta  +  qtd * errorpredic
+```
+
+```{r echo = FALSE}
+plot(x, y, col = "#3b1f2b", lwd = 2, pch = 16,
+     xlab = "Calificación de matemáticas", 
+     ylab = "Calificación de cálculo",
+     main = "Intervalos de confianza")
+     abline (a = β0, b = β1, col = "#ff5a5f", lwd = 2)
+     lines (x = sort(x),  y = sort(lieeyprom),  col="#ff4d00",  lty = 2, lwd = 2)
+     lines (x = sort(x),  y = sort(lseeyprom),  col="#ff4d00",  lty = 2, lwd = 2)
+     lines (x = sort(x),  y = sort(lieepredic),  col="#ffd100",  lty = 2, lwd = 2)
+     lines (x = sort(x),  y = sort(lseepredic),  col="#ffd100",  lty = 2, lwd = 2)
+```
+
+Como últimos pasos para nuestro análisis de regresión, realizaremos dos pruebas de normalidad para determinar si nuestros datos se aproximan a una normal, esto lo realizaremos mediante las dos pruebas clásicas de normalidad que son Shapiro y Anderson-Darling
+
+```{r}
+normalidad_shapiro <- shapiro.test(error)
+```
+
+```{r echo = FALSE}
+if (normalidad_shapiro$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales) y no hay evidencia que garantice que NO son normales",
+        normalidad_shapiro$p.value, "≥", α)
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales", 
+        normalidad_shapiro$p.value, "<", α)
+  }
+```
+
+```{r}
+library(nortest)
+normalidad_anderson <- ad.test(error)
+```
+
+```{r echo = FALSE}
+if (normalidad_anderson$p.value >= α) {
+    cat("Como el pvalor ≥ α, no rechazamos H0(los datos son normales) y no hay evidencia que garantice que NO son normales",
+        normalidad_anderson$p.value, "≥", α)
+  } else {
+    cat("Como el pvalor < α, rechazamos H0, los datos NO son normales", 
+        normalidad_anderson$p.value, "<", α)
+  }
+```
+
+Generalmente nos quedaremos con el p valor más alto, en este caso el de Shapiro, el cuál dice que los datos se comportan de manera normal
+
+Además sobre los datos podemos realizar pruebas de correlación e independencia, de la primera ya cálculamos una. Pero en este caso se dará el nombre y los valores que arroja, para el caso de independencia tenemos la de $\chi^2$ y Fisher
+
+```{r}
+tabla_contingencia <- table(x, y)
+independencia_chi_cuadrada <- chisq.test(tabla_contingencia) 
+```
+
+```{r echo = FALSE}
+  if (independencia_chi_cuadrada$p.value < α) {
+    cat("Las variables no son independientes pvalor < α",
+        independencia_chi_cuadrada$p.value, "<", α)
+  } else {
+    cat(" pvalor > α, No hay evidencia para decir que no son independientes", 
+        independencia_chi_cuadrada$p.value, ">", α)
+  }
+```
+
+```{r}
+independencia_fisher <- fisher.test(tabla_contingencia)
+```
+
+```{r echo = FALSE}
+  if (independencia_fisher$p.value < α) {
+    cat("Las variables no son independientes pvalor < α", 
+        independencia_fisher$p.value, "<", α)
+  } else {
+    cat(" pvalor > α, No hay evidencia para decir que no son independientes", 
+        independencia_fisher$p.value, ">", α)
+  }
+```
+
+A su vez, las pruebas de correalción son las siguientes
+
+```{r}
+correlacion_pearson <- cor(x, y)
+```
+
+```{r echo = FALSE}
+  if (abs(correlacion_pearson) >= 0.6) {
+    mensaje <- "Hay una correlación fuerte,"
+  } else if (abs(correlacion_pearson) <= 0.4) {
+    mensaje <- "Hay una correlación baja,"
+  } else {
+    mensaje <- "Hay una correlación media,"
+  }
+  cat(mensaje, "coeficiente de correlación de Pearson:", correlacion_pearson)
+```
+
+```{r}
+correlacion_spearman <- cor(x, y, method = "spearman")
+```
+
+```{r echo = FALSE}
+if (abs(correlacion_spearman) >= 0.6) {
+    mensaje <- "Hay una correlación fuerte,"
+  } else if (abs(correlacion_spearman) <= 0.4) {
+    mensaje <- "Hay una correlación baja,"
+  } else {
+    mensaje <- "Hay una correlación media,"
+  }
+  cat(mensaje, "coeficiente de correlación de Spearman:", correlacion_spearman)
+```

@@ -1,0 +1,763 @@
+---
+title: "Subasta"
+author: "Agustin Riquelme y Heriberto Espino"
+date: "2023-08-30"
+output: 
+  html_document:
+    theme: paper
+---
+
+
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(readxl)
+library(lmtest)
+library(nortest)
+library(ggplot2)
+library(qqplotr)
+library(GGally)
+
+library(tidyverse)
+library(DT)
+library(kableExtra)
+
+
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+
+# Nueva sección con ctrl + shift + r
+
+
+# Datos -------------------------------------------------------------------
+
+data = Ejemplo_subasta <- read_excel("C:/Users/herie/OneDrive/Documentos/GitHub/Econometria l/DataFrames/Ejemplo subasta.xlsx")
+
+x1 <- data$Edad # Predictora 1
+x2 <- data$`Num Postores` # Predicora 2
+y <- data$`Precio de subasta` # Variable de respuesta
+n <- length(x1) # Número de datos en cada variable
+
+# Funciones  ------------------------------------------------------------------
+
+graf.d.x1 <- function(x1, x2 , y, α){
+  ggplot(data.frame(x1, y), aes(x1, y)) +
+    geom_point(color = "#0072B2") +
+    labs(title = "Gráfico de edad vs. precio", x = "Edad", y = "Precio") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+graf.d.x2 <- function(x1, x2 , y, α){
+  ggplot(data.frame(x2, y), aes(x2, y)) +
+    geom_point(color = "#0072B2") +
+    labs(title = "Gráfico de postores vs. precio", x = "Postores", y = "Precio") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+ddp <- function(d){
+  ggpairs(data,
+          aes( bg = "lo que sea, no lo puedo colorear o algo", alpha = 0.5)) +
+    labs(title = "Diagrama de pares") +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+graf.mrls.x1 <- function(x1, x2 , y, α){
+  ggplot(data,aes(x1, y)) +
+    geom_point(color = "#0072B2") +
+    geom_smooth(method='lm', fill = "lightblue") + 
+    labs(title = "Recta de regresión de edad vs. precio", x = "Edad", y = "Precio") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+graf.mrls.x2 <- function(x1, x2 , y, α){
+  ggplot(data,aes(x2, y)) +
+    geom_point(color = "#0072B2") +
+    geom_smooth(method='lm', fill = "lightblue") + 
+    labs(title = "Recta de regresión de postores vs. precio", x = "Postores", y = "Precio") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+}
+aic<- function(x1, x2 , y, α){
+  D <- c()
+  d <- c()
+  
+modelo1 <- lm(y ~ x1)
+modelo2 <- lm(y ~ x2)
+mrlm <- lm(y ~ x1 + x2) 
+
+d[1] = AIC(modelo1)
+d[2] = AIC(modelo2) 
+d[3] = AIC(mrlm) 
+
+D <- c("1", "2", "Múltiple")
+
+options(scipen = 999)
+data.frame("Modelo" = D, "AIC" = d) %>%
+  kbl(caption = "Test Akaike") %>%
+  kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+extr.datos  <-  function(x1 ,x2, y, α){
+  
+  #$$H_0: \beta_i = 0 \quad v.s. \quad H_1: Beta_i dif 0 $$
+  D <- c()
+  d <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  
+  b0 <- mrlm$coefficients[1]
+  b1 <- mrlm$coefficients[2]
+  b2 <- mrlm$coefficients[3]
+  s <- result$sigma
+  scuad <- s*s
+  
+  d[1] = b0
+  d[2] = b1
+  d[3] = b2
+  d[4] = s
+  d[5] = scuad
+  
+  D <- c("β₀", "β₁", "β₂", "s", "s²")
+  
+  options(scipen = 999)
+  data.frame("Variable" = D, "Valor" = d) %>%
+    kbl(caption = "Extracción de datos") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+prueb.glob <-  function(x1 ,x2, y, α){
+  
+  #$$H_0: \beta_i = 0 \quad v.s. \quad H_1: Beta_i dif 0 $$
+  D <- c()
+  d <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  #$$H_0: \beta_1 = \beta_2 = 0 \quad v.s. \quad H_1: \text{Al menos una diferente}$$
+  
+  result$fstatistic
+  fc <- result$fstatistic[[1]]
+  d[1] = fc
+  D[1] = "FC"
+  
+  pvaluef <- pf(result$fstatistic[[1]], result$fstatistic[[2]],result$fstatistic[[3]], lower.tail = FALSE)
+  d[2] = pvaluef
+  D[2] = "P value f"
+  
+  D[3] = "Conclusión"
+  
+  if (pvaluef < α){
+    d[3] = "Se rechaza H0, es decir, el modelo es significativo"
+  }else{
+    d[3] = "No existe evidencia para afirmar H1 a  un 0.05"
+  }
+  
+  options(scipen = 999)
+  data.frame("Variable" = D, "Valor" = d) %>%
+    kbl(caption = "Pruebas global para βi") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+  
+}
+prueb.indiv1 <-  function(x1 ,x2, y, α){
+  
+  #$$H_0: \beta_i = 0 \quad v.s. \quad H_1: Beta_i dif 0 $$
+  D <- c()
+  d <- c()
+  E <- c()
+  e <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  pvalueb1 <- result$coefficients[2,4]
+  pvalueb2 <- result$coefficients[3,4]
+  
+  d[1] <- pvalueb1
+  e[1] <- pvalueb2
+  
+  D[1] <- "P value β₁"
+  D[2] <- "Concusión"
+  E[1] <- "P value β₂"
+  E[2] <- "Conclusión"
+  
+  if (pvalueb1 < α){
+    d[2] = "Se rechaza H0, es decir, β₁ es significativo para el modelo"
+  }else{
+    d[2] = "No existe evidencia para afirmar que b1 sea diferente de cero"
+  }
+  
+  if (pvalueb2 < α){
+    e[2] = "Se rechaza H0, es decir, β₂ es significativo para el modelo"
+  }else{
+    e[2] = "No existe evidencia para afirmar que b2 sea diferente de cero"
+  }
+  
+  options(scipen = 999)
+   data.frame("Variable" = D, "Valor" = d) %>%
+    kbl(caption = "Prueba individual para β₁") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+
+}
+prueb.indiv2 <-  function(x1 ,x2, y, α){
+  
+  #$$H_0: \beta_i = 0 \quad v.s. \quad H_1: Beta_i dif 0 $$
+  D <- c()
+  d <- c()
+  E <- c()
+  e <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  pvalueb1 <- result$coefficients[2,4]
+  pvalueb2 <- result$coefficients[3,4]
+  
+  d[1] <- pvalueb1
+  e[1] <- pvalueb2
+  
+  D[1] <- "P value β₁"
+  D[2] <- "Concusión"
+  E[1] <- "P value β₂"
+  E[2] <- "Conclusión"
+  
+  if (pvalueb1 < α){
+    d[2] = "Se rechaza H0, es decir, β₁ es significativo para el modelo"
+  }else{
+    d[2] = "No existe evidencia para afirmar que b1 sea diferente de cero"
+  }
+  
+  if (pvalueb2 < α){
+    e[2] = "Se rechaza H0, es decir, β₂ es significativo para el modelo"
+  }else{
+    e[2] = "No existe evidencia para afirmar que b2 sea diferente de cero"
+  }
+  
+  options(scipen = 999)
+   data.frame("Variable" = E, "Valor" = e) %>%
+    kbl(caption = "Prueba individual para β₂") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+int.conf.b1 <- function(x1, x2, y, α){
+  
+  d <- c()
+  e <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  b0 <- mrlm$coefficients[1]
+  b1 <- mrlm$coefficients[2]
+  b2 <- mrlm$coefficients[3]
+  
+  qa <- qt(α/2, n-1, lower.tail = FALSE)
+  
+  #lim inf y sup para b1
+  d[1] = b1 - qa * result$coefficients[2,2]
+  d[2] = b1 + qa * result$coefficients[2,2]
+  
+  #lim inf y sup para b2
+  e[1] = b2 - qa * result$coefficients[3,2]
+  e[2] = b2 + qa * result$coefficients[3,2]
+  
+  Datos = c("Inferior   ", "Superior   ")
+  options(scipen = 999)
+  data.frame("Límites" = Datos, "Valor" = d) %>%
+    kbl(caption = "Int. de confianza β₁") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+
+int.conf.b2 <- function(x1, x2, y, α){
+  
+  d <- c()
+  e <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+  
+  b0 <- mrlm$coefficients[1]
+  b1 <- mrlm$coefficients[2]
+  b2 <- mrlm$coefficients[3]
+  
+  qa <- qt(α/2, n-1, lower.tail = FALSE)
+  
+  #lim inf y sup para b1
+  d[1] = b1 - qa * result$coefficients[2,2]
+  d[2] = b1 + qa * result$coefficients[2,2]
+  
+  #lim inf y sup para b2
+  e[1] = b2 - qa * result$coefficients[3,2]
+  e[2] = b2 + qa * result$coefficients[3,2]
+  
+  Datos = c("Inferior   ", "Superior   ")
+  options(scipen = 999)
+  data.frame("Límites" = Datos, "Valor" = e) %>%
+    kbl(caption = "Int. de confianza β₂") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+
+}
+
+corr <- function(x1, x2, y, α){
+  
+  d <- c()
+  
+  mrlm <- lm(y ~ x1 + x2)
+  
+  result <- summary(mrlm)
+  
+  rcuad <- result$r.squared
+  r.ajust <- result$adj.r.squared
+  
+  if (abs(rcuad) >= 0.6) {
+    d[1] = "Hay una correlación fuerte"
+  } else if (abs(rcuad) <= 0.4) {
+    d[1] = "Hay una correlación baja"
+  } else {
+    d[1] = "Hay una correlación media"
+  }
+  d[2] = rcuad
+  
+
+  if (abs(r.ajust) >= 0.6) {
+    d[3] = "\nHay una correlación fuerte"
+  } else if (abs(r.ajust) <= 0.4) {
+    d[3] = "\nHay una correlación baja"
+  } else {
+    d[3] =  "\nHay una correlación media"
+  }
+  d[4] = r.ajust
+  
+  Datos = c("R cuad", "Valor", "R adj", "Valor")
+  options(scipen = 999)
+  data.frame("Rho" = Datos, "Conclsuión" = d) %>%
+    kbl(caption = "Coeficiente de correlación") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+graf.mrlm <- function(x1 ,x2, y, α){
+  
+  mrlm <- lm(y ~ x1 + x2)
+  result <- summary(mrlm)
+
+  rangox1 <- range(x1)
+  rangox2 <- range(x2)
+  
+  # Tienes del minimo,      al maximo, lo divides en 2
+  xedad <- seq(from=rangox1[1], to=rangox1[2], length.out=20)
+  xpost <- seq(from=rangox2[1], to=rangox2[2], length.out=20)
+  
+  # Gráfica
+  
+  predictores <- outer(X=xedad,Y=xpost, FUN=function(x1,x2){
+    predict(object = mrlm,newdata = data.frame(x1,x2))
+  })
+  
+  plano <- persp(x=xedad,y=xpost,z=predictores,col = "skyblue",theta = 30,phi=25)
+  observaciones <- trans3d(x1,x2,y,plano)
+  error <- trans3d(x1,x2,fitted(mrlm),plano)
+  points(observaciones,col="red",pch=19)
+  segments(observaciones$x,observaciones$y,error$x,error$y)
+  
+  # Ahora en el summary nos vamos a fijar en el F-statistic,  para saber si el modelo es significativo
+  # En este caso el DF1 = 2 y el DF2 = 29 
+  # Se calcula el pvalor para saber si es o no significativo
+  
+  qf(α, result$fstatistic[[2]],  result$fstatistic[[3]])
+  
+}
+graf.err <-  function(x1 ,x2, y, α){
+  
+  mrlm <- lm(y ~ x1 + x2)
+  error <- mrlm$residuals
+  n <- length(error)
+  x <- 1:n
+  
+  # Crear el gráfico utilizando ggplot2
+  err = ggplot(data = data.frame(x = x, error = error), aes(x = x, y = error)) +
+    geom_point(color = "#0072B2") +
+    geom_line() +
+    geom_hline(yintercept = 0, color = "#0061A1") +
+    labs(title = "Gráfico de errores", x = "Índice", y = "Error") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  # Histograma
+  hist = ggplot(data = data.frame(error), aes(x = error)) +
+    geom_histogram(binwidth = 20, fill = "#0072B2", color = "white", alpha = 0.7) +
+    labs(title = "Histograma de Error", x = "Error", y = "Frecuencia") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  # Boxplot
+  boxplot = ggplot(data = data.frame(error), aes(y = error)) +
+    geom_boxplot(fill = "#0072B2", alpha = 0.7) +
+    labs(title = "Boxplot de Error", y = "Error") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  # Gráfico QQ
+  qqgraf = ggplot(mapping = aes(sample = error)) + 
+    stat_qq_band(alpha = 0.05, fill = "blue") +
+    stat_qq_point(color = "#0072B2", alpha = 0.7) +
+    stat_qq_line (color = "#0061A1") +
+    labs(title = "Gráfico QQ de Error", x = "Cuantiles teóricos", y = "Cuantiles observados") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5)) 
+  
+  print(err)
+  print(hist)
+  print(boxplot)
+  print(qqgraf)
+}
+norm.err <-  function(x1 ,x2, y, α){
+    D <- c()
+    d <- c()
+    e <- c()
+    E <- c()
+    
+    # Análisis de residudales
+    
+    modelo = mrlm <- lm(y ~ x1 + x2)
+    errores <- summary(modelo)$residuals
+    
+    # Test de normalidad
+    if (n < 30){
+      normalidad_shapiro <- shapiro.test(errores)
+      d[1] = normalidad_shapiro$p.value
+      if (normalidad_shapiro$p.value >= α) {
+        d[2] = "p valor ≥ α, no rechazamos H0        "
+      } else {
+        d[2] = "p valor < α, rechazamos H0. No son normales"
+      }
+    } else {
+      normalidad_lillie <- lillie.test(errores)
+      lillie.pavalor <- normalidad_lillie$p.value
+      d[1] = lillie.pavalor
+      if (lillie.pavalor >= α) {
+        d[2] = "p valor ≥ α, no rechazamos H0  ."
+      } else {
+        d[2] = "p valor < α, rechazamos H0. No son normales"
+      }
+    }
+    
+    normalidad_anderson <- ad.test(errores)
+    anderson.pvalor <- normalidad_anderson$p.value
+    e[1] = anderson.pvalor
+    if (normalidad_anderson$p.value >= α) {
+      e[2] = "p valor ≥ α, no rechazamos H0             "
+    } else {
+      e[2] = "p valor < α, rechazamos H0. No son normales"
+    }
+  
+    
+    D <- c("P valor", "Conclusión     ")
+    
+    options(scipen = 999)
+    a1 = data.frame("Test Shapiro" = D, "Valor" = d) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+    
+    a2 = data.frame("Test Lillie" = D, "Valor" = d) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+    
+    a3 = data.frame("Test Anderson" = D, "Valor" = e) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+    
+    
+    if (n < 30){a1}
+    else {a2}
+    
+
+}
+
+norm.err2 <-  function(x1 ,x2, y, α){
+    D <- c()
+    d <- c()
+    e <- c()
+    E <- c()
+    
+    # Análisis de residudales
+    
+    modelo = mrlm <- lm(y ~ x1 + x2)
+    errores <- summary(modelo)$residuals
+    
+    # Test de normalidad
+    if (n < 30){
+      normalidad_shapiro <- shapiro.test(errores)
+      d[1] = normalidad_shapiro$p.value
+      if (normalidad_shapiro$p.value >= α) {
+        d[2] = "p valor ≥ α, no rechazamos H0        "
+      } else {
+        d[2] = "p valor < α, rechazamos H0. No son normales"
+      }
+    } else {
+      normalidad_lillie <- lillie.test(errores)
+      lillie.pavalor <- normalidad_lillie$p.value
+      d[1] = lillie.pavalor
+      if (lillie.pavalor >= α) {
+        d[2] = "p valor ≥ α, no rechazamos H0  ."
+      } else {
+        d[2] = "p valor < α, rechazamos H0. No son normales"
+      }
+    }
+    
+    normalidad_anderson <- ad.test(errores)
+    anderson.pvalor <- normalidad_anderson$p.value
+    e[1] = anderson.pvalor
+    if (normalidad_anderson$p.value >= α) {
+      e[2] = "p valor ≥ α, no rechazamos H0             "
+    } else {
+      e[2] = "p valor < α, rechazamos H0. No son normales"
+    }
+  
+    
+    D <- c("P valor", "Conclusión     ")
+    
+    options(scipen = 999)
+    a1 = data.frame("Test Shapiro" = D, "Valor" = d) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+    
+    a2 = data.frame("Test Lillie" = D, "Valor" = d) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+    
+    a3 = data.frame("Test Anderson" = D, "Valor" = e) %>%
+      kbl(caption = "Normalidad \nH0: Err. norm vs H1: Err. no norm") %>%
+      kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial")
+    
+a3
+    
+
+}
+
+corr.err <-  function(x1 ,x2, y, α){
+  
+  mrlm <- lm(y ~ x1 + x2)
+  
+  d <- c()
+
+  dwtest(mrlm)
+  dw <- dwtest(mrlm)$statistic
+  pvalor.dw <- dwtest(mrlm)$p.value
+  
+  if (dw <= 1){
+    d[3] <- "Hay una correlación positiva en los residuos"
+  } else if (dw >= 3) {
+    d[3] <- "Hay una correlación negativa en los residuos"
+  } else {
+    d[3] <- "No hay una correlación en los residuos"
+  }
+  
+  d[1] <- dw
+  d[2] <- pvalor.dw
+  
+  Datos <- c("DW", "P valor", "Conclusión")
+  options(scipen = 999)
+  data.frame("Test" = Datos, "Conclusión" = d) %>%
+    kbl(caption = "Test Durbin-Watson") %>%
+    kable_classic(bootstrap_options = basic, full_width = F, html_font = "Arial") 
+}
+
+
+# Ejemplo -----------------------------------------------------------------
+
+# Resultados  ---------------------------------------------------------------
+
+```
+
+### 1. Lectura de la base de datos
+
+Podemos observar que la base contiene tres columnas, una de nombre edad, otra número de postores y el último precio de subasta
+
+```{r echo=FALSE}
+names(data)
+head(data)
+```
+
+Para la creación de los modelos vamos a definir nuestra variable de respuesta que será el precio de subasta, mientras que las otras dos serán la edad y el número de postores, a cada una de estas variables predictoras se le realizará un modelo de regresión por separado, a continuación lo veremos:
+
+```{r}
+x1 <- data$Edad # Predictora 1
+x2 <- data$`Num Postores` # Predicora 2
+y <- data$`Precio de subasta` # Variable de respuesta
+n <- length(x1) # Número de datos en cada variable
+```
+
+Vamos a ver el diagrama de pares para irnos dando una idea de como son los datos de la muestra de la subasta
+```{r}
+ddp(data)
+```
+
+### 2. Modelo 1 Precio~edad
+```{r}
+graf.d.x1(x1, x2, y, 0.05)
+```
+
+Para ver el comportamiento de los datos, una gráfica de dispersión siempre es la mejor opción, observando dicha herramienta, podemos observar que el comportamiento entre las variables tienen una relación positiva, además de poder observar los límites de los datos que van de 100 a 200 para el caso de la edad, y para el caso del precio desde 600 hasta 2200.
+
+```{r echo = FALSE}
+modelo1 <- lm(y~x1)
+summary(modelo1)
+```
+
+En el modelo podemos observar la relación positiva que habíamos visto anteriormente con el valor de $\beta_1$. En el apartado de residuales no observamos un comportamiento tan simétrico y el promedio es distinto de cero, por lo que podemos decir que los residuos no se comportan normalmente. Para el caso de $\beta_1$ su variación es baja, sin embargo para $ \beta_0$ su variación es bastante alta. Sim embargo para el valor estadístico t, para 
+$\beta_0$ su valor es cercano a cero, indicando que la hipótesis nula puede ser aceptada para este caso, sin embargo para $\beta_1$ sucede lo contrario, esto igualmente puede ser observado en el valor p.
+Por otro lado nuesto error residual es bastante alto, es decir, nuestro error en cada predicción, se va a desviar mucho de nuestra línea de regresión. Podemos igualmente observar que la precisión de nuestro modelo no es tan alta, pero al menos está poco encima del 50%, es decir, o bien, poco más del 50% de los datos observados pueden ser explicados con nuestro modelo. Finalmente podemos decir con el estadístico F que hay evidencia suficiente para rechazar $H_0$: No existe relación entre ambas variales.
+
+```{r}
+AIC(modelo1)
+```
+
+Por otro lado el criterio de Información de Akaike nos va a servir para comparar ambos modelos, es decir, el que tenga menor valor AIC, será el mejor modelo. A continuación se muestra la línea de regresión del modelo.
+
+```{r}
+graf.mrls.x1(x1, x2, y, 0.05)
+```
+
+
+
+### 3. Modelo 2: Precio~Num Postores
+```{r}
+graf.d.x2(x1, x2, y, 0.05)
+```
+
+Como mencionamos anteriormente, la gráfica de dispersión es de ayuda para poder observar el comportamiento de nuestras variables, en este caso podemos observar un comportamiento más disperso que el antrior el cual ronda entre los 5 a 15 postores, observando una relación positiva
+
+```{r echo = FALSE}
+modelo2 <- lm(y~x2)
+summary(modelo2)
+```
+
+En el modelo podemos observar la relación positiva que habíamos visto anteriormente con el valor de $\beta_1$, además de observar que los residuos no se comportan tanto de manera simétrica. En este caso, tanto $\beta_0$ como $\beta_1$ su varianza es baja, mucho menor que las betas, y a su vez en el estadístico, ambos valores están alejados de cero, pero no son tan grandes comparadas con la varianza.
+Por otro lado, el error residual es más elevado que el pasado y en conjunto nos da que nuestra precisión del modelo es muy baja, siendo 0.15, indicando que sólo el 15% de nuestros datos pueden ser descritos con el modelo. Finalmente podemos decir con el estadístico F que parece no ser lo suficientemente grande comparado con nuestra muestra pudiendo indicar que no existe una relación entre las variables.
+
+
+```{r}
+AIC(modelo2)
+```
+
+Comparando el AIC de ambos modelos, se puede decir que el primero es mejor que este segundo modelo. A continuación se observa la gráfica de dispersión para este modelo.
+
+```{r echo = FALSE}
+lm(modelo1)
+```
+
+```{r}
+graf.mrls.x2(x1, x2, y, 0.05)
+```
+
+### 4. Construcción del modelo de regresión múltiple
+
+Para este caso, se incluirán ambas variables como predictoras, es decir, comparado con los anteriores modelos, aquí se incluirá otro criterio para saber si existe una relación predecible entre las variables, su construcción es similar a la del modelo pasado, únicamente, como se djo al inicio, se incluirán dos variables predictoras que fueron las de los modelos pasados. Para ello se usará el mismo modelo lm que en casos pasados pero haremos la suma de ambas variables.
+
+```{r}
+modmult <- lm(y ~ x1+x2)
+anova <- aov(modmult)
+summary(anova)
+```
+
+Además, al observar el anova podemos ver mucha significancia en las variables predictoras al tener tanto un estadístico alto así como un p valor significativo y que ambas variables predictoras contribuyen al modelo. Igual podemos observar la comparación de media y varianzas y a su vez podemos decir que al menos una $\beta_i$ es distinta de cero. 
+
+```{r}
+modmult <- lm(y ~ x1+x2)
+anova <- aov(modmult)
+summary(modmult)
+```
+
+Al observar el p valor del estadístico F del modelo, podemos ver que es muy bajo, es decir, es significativo, ya anteriormente habíamos visto el de cada variable por separado e igualmente eran significativos. El error residual de este modelo es mucho más bajo por lo que podemos decir que nuestras predicciones pueden variar en 133.5 a comparación de los datos originales y si se observa con detalle, la confianza de este modelo aumenta significativamente con el número de variables consideradas.
+
+```{r}
+aic(x1, x2, y, 0.05)
+```
+
+Por el criterio de Akaike, parece ser el mejor modelo este de regresión lineal multiple, pues su valor es el más bajo. Esto debido a que toma en cuenta más argumentos para hacer las predicciones.
+
+
+### 5. Extracción de Información del modelos
+
+Para la extracción de la información del modelo, lo importante a considerar serán nuestras betas, nuestra $S^2$ y nuestro estadístico así como su p valor, para ello, en el primer caso, las betas serán obtenidas con los coeficientes del modelo, especificamente aquellos que se encuentran en la primer fila y en cada una de las columnas.
+
+```{r}
+extr.datos(x1, x2, y, 0.05)
+```
+
+
+### 6. Prueba general del Modelo
+
+La prueba general del modelo se realizará mediante la comparación del valor p, si este es significativo, es decir, es menor que 0.05, el modelo de igual manera será significativo, en caso contrario no existirá evidencia para esta afirmación. Siendo su validación de la siguiente manera y concluyendo que el modelo sí es significativo al rechazar $H_0$
+
+
+```{r}
+prueb.glob(x1, x2, y, 0.05)
+```
+
+### 7. Correlación
+
+```{r}
+corr(x1, x2, y, 0.05)
+```
+
+El coeficiente de correlación (Rho) es una medida numérica que varía entre -1 y 1. Un valor de 1 indica una correlación positiva perfecta, mientras que un valor de -1 indica una correlación negativa perfecta. En este caso, el valor de Rho es 0.892343916353148, lo que sugiere una correlación positiva fuerte entre las variables que estás analizando.
+
+R cuadrado (R cuad) es una medida que indica qué porcentaje de la variación en una variable puede explicarse por la otra variable en el modelo de regresión. Un valor de 0.892343916353148 sugiere que aproximadamente el 89.23% de la variación en una variable puede explicarse por la otra variable en este análisis.
+
+R cuadrado ajustado (R adj) es similar a R cuadrado, pero tiene en cuenta el número de predictores en el modelo. Si el valor de R adj es alto, indica que el modelo es adecuado para explicar la variación en la variable dependiente.
+
+En resumen, los valores proporcionados indican que hay una correlación positiva fuerte entre las variables analizadas, y aproximadamente el 89.23% de la variación en una variable puede explicarse por la otra variable en el modelo. Además, tanto R cuadrado como R cuadrado ajustado sugieren que el modelo es adecuado para explicar la relación entre las variables.
+
+### 8. Pruebas Individuales
+
+Para el caso de las pruebas individuales, se va a extraer del modelo cada uno de los p valores de las variables predictoras. Al estar estas en la sección de los coeficientes, bastará con indicar su posición en la matriz para obtenerlas:
+
+Y para sus respectivas pruebas, como en el caso anterior y ya muchos otros modelos, los p valores se compararán con nuestro alpha y podemos observar que en ambos casos se rechaza $H_0$, queriendo decir que ambas betas son significativas para el modelo
+
+```{r}
+prueb.indiv1(x1, x2, y, 0.05)
+prueb.indiv2(x1, x2, y, 0.05)
+```
+
+### 9. Intervalos de confianza para $\beta_i$
+
+Para el calculo de los intervalos de confianza de cada beta, se obtendrá el valor de probabilidad acumulada de una t student de dos colas con $n-1$ grados de libertad y se realizará el calculo para cada beta restandole el producto de la probabilidad acumulada con su error estándar, siendo su calculo de la siguiente manera:
+
+Obteniendo los siguientes resultados, que afirman a un nivel alpha = 0.05 que cada beta se encuentra en ese intervalo.
+ 
+```{r}
+int.conf.b1(x1, x2, y, 0.05)
+int.conf.b2(x1, x2, y, 0.05)
+```
+
+### 10. Gráfica del modelo
+
+Al graficar el modelo, podemos observar como puntos rojos cada uno de los datos que tenemos en el modelo y el plano representa nuestro modelo de regresión, la distancia entre cada uno de estos va a ser el error de predicción y al observarlo a detalle podemos ver que todos los errores parecen pequeños.
+
+```{r}
+graf.mrlm(x1, x2, y, 0.05)
+```
+
+### 11. Análisis de residuales
+
+Los errores del modelo serán los residuales y podemos observar que los errores no se acercan a una distribución normal al graficarlos, además de estar todos bastante alejados del cero.
+
+```{r}
+graf.err(x1, x2, y, 0.05)
+```
+
+Como el número de datos es mayor que 30, se usará la prueba Lillie y la Anderson para comprobar si los errores se comportan de manera normal con mayor evidencia.
+
+```{r}
+norm.err(x1, x2, y, 0.05)
+norm.err2(x1, x2, y, 0.05)
+```
+
+### 12. Correlación de los errores
+
+```{r}
+corr.err(x1, x2, y, 0.05)
+```
+
+
+En el análisis estadístico realizado, se aplicó el Test Durbin-Watson para evaluar la presencia de autocorrelación en los residuos del modelo. El resultado del test arrojó un valor de 1.87200832574999 para el estadístico Durbin-Watson (DW). En este contexto, un valor de DW cercano a 2 sugiere que no hay autocorrelación en los residuos. Además, se calculó el valor P, que fue encontrado como 0.355352817154974. Un valor P mayor que el nivel de significancia (generalmente 0.05) indica que no hay evidencia suficiente para rechazar la hipótesis nula de que no hay autocorrelación en los residuos.
+
+En base a estos resultados, se llega a la conclusión de que no hay una correlación significativa en los residuos del modelo. Esto significa que los errores residuales del modelo analizado no muestran un patrón sistemático en su distribución, lo que refuerza la fiabilidad de las conclusiones obtenidas a partir de este análisis estadístico
