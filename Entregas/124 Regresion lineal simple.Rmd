@@ -1,0 +1,176 @@
+---
+output: html_document
+---
+<center>
+# Práctica 1
+#### Agustin Riquelme y Heriberto Espino
+</center>
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+</n>
+
+Con el objetivo de sintetizar las líneas de código lo más posible, se ha realizado una función la cuál necesitará como argumentos la variable de respuesta y predictora para el modelo y el nivel de significancia $\alpha$, esta función será usada a lo largo del presente documento y con el objetivo de visualizar los datos de manera más "amigable", el código de la función se ocultará para el reporte pero permanecerá en el formato markdown para su correcta ejecución.
+
+```{r echo = FALSE, warning = FALSE}
+library(DT)
+library(kableExtra)
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+data <- read_csv("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Advertising.csv")
+tv    <- data$TV
+radio <- data$radio
+newsp <- data$newspaper
+sales <- data$sales
+```
+
+
+```{r echo = FALSE, fig.align = "center"}
+linealmodel <-   function(x, y, α){
+  modelo <- lm(y ~ x)
+  d <- c()
+  e <- c("β0","β1","S","S cuad", "cv", "df","qti","qtd","tc","p value","Int. conf.","","Prom. err.", "Var. err.","P. Hip. β1 Est.","P. Hip. β1 Pvalue")
+  # Plot
+  boxplot(x, col = "lightblue1", xlab = "Variable de predictora", main = "Boxplot x")
+  hist(x, col = "darkseagreen1", xlab = "Variable de predictora", main = "Histograma x", breaks = 20)
+  plot(x,y, col = "coral1", xlab = "Variable de predictora", ylab = "Variable de respuesta", main = "Gráfico dispersión")
+  plot(x, y, col = "#761E1E", pch = 16, lwd = 1,  cex = 0.5,
+           xlab = "Variable predictora", ylab = "Variable de respuesta", main = "Recta de regresión",
+           abline( lm( y ~ x ), col = "#bc4749", lwd = 3) )
+  # Identificar cosas
+        # Identificar β0
+        β0 <- modelo$coefficients["(Intercept)"]
+        d[1] <- β0
+        # Identificar β1
+        β1 <- modelo$coefficients["x"]
+        d[2] <- β1
+        # Ecuación de la recta
+        recta <- β0  +  β1 * x
+        # s
+        s <- summary(modelo)$sigma
+        d[3] <- s
+        # S cuad
+        scuad <- s^2
+        d[4] <- s^2
+        # CV
+        cv <- 100 * s / mean(x)
+        d[5] <- cv
+  # Inferencia para β1# H0: β1 = 0 vs H1: β1 ≠ 0
+        # Obtener df
+          df <- summary(modelo)$df[2]
+          d[6] <- df
+        # Obtener las qt
+          qti <- qt(α/2, df, lower.tail = TRUE)
+          d[7] <- qti
+          qtd <- qt(α/2, df, lower.tail = FALSE)
+          d[8] <- qtd
+        # Obtener tc
+          tc <- summary(modelo)$coefficients["x", "t value"]
+          d[9] <- tc
+        # Obtener pvalor
+          pvalor <- summary(modelo)$coefficients["x", "Pr(>|t|)"]
+          d[10] <- pvalor
+          # Prueba de hipotesis para β1
+          if( abs(tc) > qtd ){
+            d[15] = "Rechazamos H0"
+          }else{
+            d[15] = "No rechazamos H0"
+          }
+          if( pvalor < α){
+            d[16] = "Rechazamos H0"
+          }else{
+            d[16] = "No rechazamos H0"
+          }
+  # Intervalo de confianza para β1
+          intconfβ1 <- confint(modelo, level = 1 - α)
+          intconfβ1 <- intconfβ1["x", ]
+          d[11] <- intconfβ1[1]
+          d[12] <- intconfβ1[2]
+  # Error estándar de promy
+        n <- length(x)
+        erroryprom <- s * sqrt( (1/n)  +  (x - mean(x))^2 / (sum(x^2)  -  n * mean(x)^2  ) ) 
+        errorpredic <- s * sqrt( 1  +  (1/n)  +  (x - mean(x))^2 / (sum(x^2)  -  n * mean(x)^2) ) 
+        # Límite inferior error estándar del promedio de y
+          lieeyprom <- recta  -  qtd * erroryprom
+        # Límite superior error estándar del promedio de y
+          lseeyprom <- recta  +  qtd * erroryprom
+        # Límite inferior del error estándar de la predicción
+          lieepredic <- recta  -  qtd * errorpredic
+        # Límite superior del error estándar de la predicción
+          lseepredic <- recta  +  qtd * errorpredic
+        # Gráfica
+          plot(x, y, col = "#3b1f2b", lwd = .5, pch = 16, cex = 0.5,
+               xlab = "x", ylab = "y", main = "Intervalos de confianza")
+                abline (a = β0, b = β1, col = "#ff5a5f", lwd = 2)
+                lines (x = sort(x),  y = sort(lieeyprom),  col="#ff4d00",  lty = 2, lwd = 2)
+                lines (x = sort(x),  y = sort(lseeyprom),  col="#ff4d00",  lty = 2, lwd = 2)
+                lines (x = sort(x),  y = sort(lieepredic),  col="#ffd100",  lty = 2, lwd = 2)
+                lines (x = sort(x),  y = sort(lseepredic),  col="#ffd100",  lty = 2, lwd = 2)
+  # Análisis de residudales
+          error <- y - recta
+          d[13] <- mean(abs(error))
+          d[14] <- var(abs(error))
+        # Gráfica para saber si es varianza fija
+          plot(error, col="#0d47a1", type = "o",lwd = 2, pch = 16,
+               xlab = "Índice de Observación", ylab = "Valor de Error", main = "Gráfico de Errores")
+          lines(1:n, rep(0,n), col="#df3e3e", lwd = 2)
+        # Histograma
+          hist(error, col = "#415a77", border = "white",
+               main = "Histograma de Errores", xlab = "Errores", ylab = "Frecuencia")
+        # Boxplot
+        #  boxplot(error, main = "Boxplot", col = "#588157", medcol = "#344e41", border = "#344e41")
+        # QQ
+          qqnorm(error, col = "#ad2831", lwd = 2, pch = 0, cex = 0.1,
+                 main = "Gráfico QQ de Errores", xlab = "Cuantiles teóricos", ylab = "Cuantiles de los errores") 
+                 qqline(error, col = "#640d14", lwd = 2)
+          data.frame("Datos" = e, "Valores" = d) %>%
+          kbl(caption = "Informacion del modelo") %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+    }
+```
+
+
+A continuación se mostrarán los resultados obtenidos para cada modelo de regresión líneal simple, considerando a la variable sales como la variable de respuesta, y los gastos de marketing en cada una de las plataformas serían las variables de predicción, pues las ventas pueden tener relación con el medio por el cuál se realiza el marketing y en ese caso, podríamos predecir las ventas a partir de una campaña de marketing ya propuesta para ver si es óptima o no.
+
+Para el modelo de regresión conformado por las ventas y el marketing de TV se obtuvo lo siguiente:
+
+```{r}
+linealmodel(tv, sales, 0.05)
+```
+
+Las tres primeras gráficas son representantes de nuestro vector que almacena todos los presupuestos publicitarios (en miles de dólares) para TV. Principalmente, viendo sólo el boxplot podriamos intuir que la manera en la que se distribuyen los datos es una normal, pues el 50% de los datos se encuentra en el centro y la mediana está justo al centro del cuadrado, además, el valor máximo y el mínimo se encuentran a la misma distancia que los cuartiles, por lo que todo indicaría que se trata de una distribución normal, sin embargo, al momento de realizar el histograma de los mismos podemos comprobar que no se trata de la distribución pensada. Sin embargo, por el tercer gráfico, podemos decir que existe una corelación lineal positiva entre las ventas y el presupuesto hacia TV. Finalmente en el cuarto gráfico podremos corroborar que la recta de regresión muestra lo pensado.
+
+
+Seguido de estos gráficos tendremos el de los intervalos de confianza para los valores medios y predicción de la variable de respuesta podemos observar que conforme los valores crecen, el modelo ya no se ajusta consistentemente, pues existen datos en la muestra que se salen de los intervalos de confianza, y si nos fijamos en el gráfico de dispersión que muestra la relación entre las variables, si tuvieramos que graficar dos líneas rectas que encerraran todos los puntos, estas no tendrían la misma pendiente y serían en forma de cono, por lo que conforme crecen los valores del modelo, más se separan entre sí, indicando que para valores altos, el modelo no se ajusta lo suficiente.
+
+
+Por otro lado, los gráficos de los errores nos muestran un error máximo aproximado de 8 por lo que podemos observar en la gráfica de línea, y posteriormente al calcular el promedio de los errores, nos da 2.54 que es un valor relativamente bajo, que podría indicar que el modelo a pesar de no tener un ajuste en los datos más grandes, aún así obtiene resultados precisos para los demás valores. La distribución de los errores está sesgada a la derecha y para el gráfico qq, los residuos intermedios del modelo, son los que más se ajustan a una distribución normal.
+
+
+Nuestros betas son la manera para crear nuestra línea de regresión, donde con beta 1 al ser bajo representa que conforme nuestra variable predictora aumenta, la de respuesta igual pero en una proporción mucho menor, nuestra varianza residual es de 10, y tenemos un coeficiente de variación de 2, indicando que no existe una gran variabilidad relativa comparada con nuestra media, el intervalo de confianza de beta 1 nos explica entre que intervalo existe con un nivel de significancia alpha, nuestro beta 1, y como podemos observar, se encuentra cercano al cero pero ese número no esta en el intervalo, por lo que podemos decir con mayor confianza que rechazamos la hipótesis nula, indicando que nuestro beta1 es distinto de cero.
+
+
+```{r}
+linealmodel(radio, sales, 0.05)
+```
+
+
+Con nuestros datos del nuevo modelo con radio como variable predictora, podemos ver en el boxplot que nuestros datos se encuentran sesgados a la izquierda, y en el histograma podemos ver de manera similar que los datos se encuentran un poco más condensados del lado izquierdo. Sin embargo no se aproximan a una distribución conocida. Y por lo aprendido en modelo anterior, podemos ver que en este caso se encuentran más dispersos los datos, incluso existiendo uno que otro outlier en la relación. Al graficar la línea de regresión podemos ver que los puntos en esta ocasión se encuentran más lejanos de la misma y se espera un promedio de errores mayor que el modelo anterior.
+
+
+Para los intervalos de confianza podemos observar que estos encierran mayormente los datos excepto por algunos outliers del modelo, sin embago estos intervalos parecen estar más amplios que el pasado, pues los datos se alejan más de la línea de regresión. Los errores en los gráficos podemos observar que sí están más alejados en la parte inferior, mientras que en la parte superior a la línea, observamos comportamientos de errores similares a los del modelo pasado, en este caso el histograma de dichos errores igualmente esta sesgado a la derecha y para el caso del ajuste a una distribución normal, dichos errroes se aproximan más a una normal conforme los presupuestos crecen.
+
+
+En este caso,, nuestro beta 1 es un valor más alto, indicando que un aumento en la variable predictora, aumentan en mucha mayor proporción los resultados de nuestra variable de respuesta, sin embargo nos encontramos con una varianza mayor al estar los datos más dispersos entre sí, casi el doble que el modelo pasado, y de la misma manera el coeficiente de variación indica una alta variabilidad relativa con respecto de la media. El intervalo de confianza para beta 1 se encuentra entre 0.16 y 0.25 con un nivel de significacncia alpha, queriendo decir en conjunto con el p valor que se rechaza la hipótesis nula que indica que beta 1 puede ser cero. Como deducimos, los errores son mayores, pues su promedio es 3.32, sin embargo se esperaba que por la forma de la gráfica y la aproximación de la línea, estos serían mayores.
+
+
+```{r}
+linealmodel(newsp, sales, 0.05)
+```
+
+
+Para nuestro último modelo donde la variable predictora corresponde a los gastos publicitarios en periodicos, podemos observar dos grandes outliers por el box plot que se encuentran muy alejados de nuestros datos, a su vez podemos decir que se encuentran los datos muy sesgados a la izquierda y en el histograma podemos observar que sí sucede de esta manera, observando que la mayoría de los presupuestos son bajos para este tipo de publicidad. En este caso sí podemos observar aún más una mayor variabilidad en los datos, pues aún se encuentran más dispersos los puntos, incluso más que los modelos pasados, incluso diciendo que este tendrá los errores más altos por su separación de la línea de regresión. Los outliers vistos corresponden que los gastos son mayores a lo que se observa generalmente
+
+
+Para el caso de los intervalos de confianza, podemos observar que los intervalos dado igualmente se ajustan pero dejan algunos datos superiores fuera de dichos intervalos, pero como predijimos, los errores son bastante altos, pues varian y llegan hasta más de 10, errores que en promedio son de 4.14 que sí es el error promedio máximo de los tres modelos. El histograma de estos errores muestra un comportamiento sesgado a la izquierda y observamos por el gráfico qq que este es el modelo que menos se ajusta a una distribución normal.
+
+Como todos los datos anteriores, la varianza de este modelo es la más alta, por lo que nuestro datos no parecen depender mucho del modelo, se ajustan muy poco y no parecen tener un impacto sobre la tendencia de los datos. La variación promedio relativa con respecto a la media igual es bastante alta indicando una poca confiabilidad en el modelo. Beta 1 es un valor pequeño, es decir, no cambia en mucha proporción conforme aumentas la variable predictora y además con esto y el p valor rechazamos de nuevo la hipótesis nula y decimos que beta 1 es distinto de cero

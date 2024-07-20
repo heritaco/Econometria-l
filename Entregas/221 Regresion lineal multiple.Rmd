@@ -1,0 +1,403 @@
+---
+output: html_document
+---
+<center>
+# Regresión Lineal Multiple: Subasta - Econometría I
+#### Agustin Riquelme y Heriberto Espino
+</center>
+
+</n>
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+library(readxl)
+library(lmtest)
+library(nortest)
+library(ggplot2)
+library(qqplotr)
+library(GGally)
+
+library(tidyverse)
+library(DT)
+library(kableExtra)
+
+
+library(ggthemes)
+```
+
+
+### 1. Lectura de la base de datos
+Para la lectura de la base de datos se usara la función setwd para escribir el directorio del cual el código agarrará las bases, en este caso será de las decargas de la computadora que se está usando, siendo *C:/Users/agust/Downloads* el lugar donde se encontrará nuestra base de datos. La base de datos es especificamente un archivo excel por lo que haremos uso de la función real excel para poder guardar los valores en un data frame y poder realizar el modelo.
+
+<center>
+```{r}
+
+subasta <- read_excel("C:/Users/herie/OneDrive - Fundacion Universidad de las Americas Puebla/Semestre/5 Semestre/Econometria l/Bases de datos/Ejemplo subasta.xlsx")
+
+```
+</center>
+
+Además podemos observar que la base contiene tres columnas, una de nombre edad, otra número de postores y el último precio de subasta
+
+<center>
+```{r echo=FALSE}
+names(subasta)
+head(subasta)
+```
+</center>
+
+Para la creación de los modelos vamos a definir nuestra variable de respuesta que será el precio de subasta, mientras que las otras dos serán la edad y el número de postores, a cada una de estas variables predictoras se le realizará un modelo de regresión por separado, a continuación lo veremos:
+
+<center>
+```{r}
+x1 <- subasta$Edad
+x2 <- subasta$NumPostores
+y <- subasta$PrecioSubasta
+n <- length(x1)
+```
+</center>
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 2. Modelo 1 Precio~edad
+
+<center>
+```{r echo = FALSE}
+ggplot(mapping = aes(x = x1, y = y)) +
+  geom_point() +
+  theme_fivethirtyeight()
+```
+</center>
+
+Para ver el comportamiento de los datos, una gráfica de dispersión siempre es la mejor opción, observando dicha herramienta, podemos observar que el comportamiento entre las variables tienen una relación positiva, además de poder observar los límites de los datos que van de 100 a 200 para el caso de la edad, y para el caso del precio desde 600 hasta 2200.
+
+```{r echo = FALSE}
+modelo1 <- lm(y~x1)
+summary(modelo1)
+```
+
+En el modelo podemos observar la relación positiva que habíamos visto anteriormente con el valor de $\beta_1$. En el apartado de residuales no observamos un comportamiento tan simétrico y el promedio es distinto de cero, por lo que podemos decir que los residuos no se comportan normalmente. Para el caso de $\beta_1$ su variación es baja, sin embargo para $ \beta_0$ su variación es bastante alta. Sim embargo para el valor estadístico t, para 
+$\beta_0$ su valor es cercano a cero, indicando que la hipótesis nula puede ser aceptada para este caso, sin embargo para $\beta_1$ sucede lo contrario, esto igualmente puede ser observado en el valor p.
+Por otro lado nuesto error residual es bastante alto, es decir, nuestro error en cada predicción, se va a desviar mucho de nuestra línea de regresión. Podemos igualmente observar que la precisión de nuestro modelo no es tan alta, pero al menos está poco encima del 50%, es decir, o bien, poco más del 50% de los datos observados pueden ser explicados con nuestro modelo. Finalmente podemos decir con el estadístico F que hay evidencia suficiente para rechazar $H_0$: No existe relación entre ambas variales.
+
+```{r}
+AIC(modelo1)
+```
+
+Por otro lado el criterio de Información de Akaike nos va a servir para comparar ambos modelos, es decir, el que tenga menor valor AIC, será el mejor modelo. A continuación se muestra la línea de regresión del modelo.
+
+```{r echo = FALSE}
+lm(modelo1)
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 3. Modelo 2: Precio~Num Postores
+
+<center>
+```{r echo = FALSE}
+
+```
+</center>
+
+Como mencionamos anteriormente, la gráfica de dispersión es de ayuda para poder observar el comportamiento de nuestras variables, en este caso podemos observar un comportamiento más disperso que el antrior el cual ronda entre los 5 a 15 postores, observando una relación positiva
+
+```{r echo = FALSE}
+modelo2 <- lm(y~x2)
+summary(modelo2)
+```
+
+En el modelo podemos observar la relación positiva que habíamos visto anteriormente con el valor de $\beta_1$, además de observar que los residuos no se comportan tanto de manera simétrica. En este caso, tanto $\beta_0$ como $\beta_1$ su varianza es baja, mucho menor que las betas, y a su vez en el estadístico, ambos valores están alejados de cero, pero no son tan grandes comparadas con la varianza.
+Por otro lado, el error residual es más elevado que el pasado y en conjunto nos da que nuestra precisión del modelo es muy baja, siendo 0.15, indicando que sólo el 15% de nuestros datos pueden ser descritos con el modelo. Finalmente podemos decir con el estadístico F que parece no ser lo suficientemente grande comparado con nuestra muestra pudiendo indicar que no existe una relación entre las variables.
+
+
+```{r}
+AIC(modelo2)
+```
+
+Comparando el AIC de ambos modelos, se puede decir que el primero es mejor que este segundo modelo. A continuación se observa la gráfica de dispersión para este modelo.
+
+```{r echo = FALSE}
+lm(modelo1)
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 4. Construcción del modelo de regresión múltiple
+
+Para este caso, se incluirán ambas variables como predictoras, es decir, comparado con los anteriores modelos, aquí se incluirá otro criterio para saber si existe una relación predecible entre las variables, su construcción es similar a la del modelo pasado, únicamente, como se djo al inicio, se incluirán dos variables predictoras que fueron las de los modelos pasados. Para ello se usará el mismo modelo lm que en casos pasados pero haremos la suma de ambas variables.
+
+```{r}
+modmult <- lm(y ~ x1+x2)
+anova <- aov(modmult)
+summary(anova)
+```
+
+Además, al observar el anova podemos ver mucha significancia en las variables predictoras al tener tanto un estadístico alto así como un p valor significativo y que ambas variables predictoras contribuyen al modelo. Igual podemos observar la comparación de media y varianzas y a su vez podemos decir que al menos una $\beta_i$ es distinta de cero. 
+
+```{r}
+modmult <- lm(y ~ x1+x2)
+anova <- aov(modmult)
+summary(modmult)
+```
+
+Al observar el p valor del estadístico F del modelo, podemos ver que es muy bajo, es decir, es significativo, ya anteriormente habíamos visto el de cada variable por separado e igualmente eran significativos. El error residual de este modelo es mucho más bajo por lo que podemos decir que nuestras predicciones pueden variar en 133.5 a comparación de los datos originales y si se observa con detalle, la confianza de este modelo aumenta significativamente con el número de variables consideradas.
+
+```{r}
+AIC(modmult)
+```
+
+Por el criterio de Akaike, parece ser el mejor modelo este de regresión lineal multiple, pues su valor es el más bajo. Esto debido a que toma en cuenta más argumentos para hacer las predicciones.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 5. Extracción de Información del modelos
+
+Para la extracción de la información del modelo, lo importante a considerar serán nuestras betas, nuestra $S^2$ y nuestro estadístico así como su p valor, para ello, en el primer caso, las betas serán obtenidas con los coeficientes del modelo, especificamente aquellos que se encuentran en la primer fila y en cada una de las columnas.
+
+```{r}
+b0 <- modmult$coefficients[[1]]
+b1 <- modmult$coefficients[[2]]
+b2 <- modmult$coefficients[[3]]
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(DT)
+library(kableExtra)
+basic <- c("stripped", "boarded", "hover", "condensed", "responsive")
+data.frame("Betas" = c("β₀", "β₁", "β₂"), "Valor" = c(b0,b1,b2)) %>%
+          kbl() %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+
+```
+
+Para el caso de las demás variables, el resumen del modelo se deberá guardar en una nueva variable ya que la extracción de algunas variables es más sencilla de esta manera. En el caso de nuestro error estándar lo obtenemos al llamar a *sigma*, y el valor es el siguiente:
+
+```{r}
+result <- summary(modmult)
+s <- result$sigma
+scuad <- s^2
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+data.frame("s²" = scuad) %>%
+          kbl() %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+```
+
+Para el caso del estadístico F y su respectivo valor, el del modelo representara la primera posición, y seguido de ello irá el valor de los grados de libertad de cada una de las variables. Para obtener su p valor, se usará la probabilidad de una Fisher con el valor estadístico del modelo y cada uno de sus grados de libertad:
+
+
+```{r}
+F_stam <- result$fstatistic[[1]]
+F_sta1 <- result$fstatistic[[2]]
+F_sta2 <- result$fstatistic[[3]]
+pvaluef <- pf(F_stam, F_sta1, F_sta2, lower.tail = FALSE)
+```
+  
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+data.frame("Estadístico F" = c("Modelo", "x1", "x2"), "Valor" = c(F_stam, F_sta1, F_sta2)) %>%
+          kbl() %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+cat("El valor p para el estadístico F del modelo es: ", pvaluef)
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 6. Prueba general del Modelo
+
+La prueba general del modelo se realizará mediante la comparación del valor p, si este es significativo, es decir, es menor que 0.05, el modelo de igual manera será significativo, en caso contrario no existirá evidencia para esta afirmación. Siendo su validación de la siguiente manera y concluyendo que el modelo sí es significativo al rechazar $H_0$
+
+```{r}
+if (pvaluef < 0.05){
+  cat("Se rechaza H_0, es decir, el modelo es significativo")
+}else{
+  cat("No existe evidencia para afirmar H_1 a un nivel alpha = 0.05")
+}
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 7. Pruebas Individuales
+
+Para el caso de las pruebas individuales, se va a extraer del modelo cada uno de los p valores de las variables predictoras. Al estar estas en la sección de los coeficientes, bastará con indicar su posición en la matriz para obtenerlas:
+
+```{r}
+pvalueb1 <- result$coefficients[2,4]
+pvalueb2 <- result$coefficients[3,4]
+```
+
+Y para sus respectivas pruebas, como en el caso anterior y ya muchos otros modelos, los p valores se compararán con nuestro alpha y podemos observar que en ambos casos se rechaza $H_0$, queriendo decir que ambas betas son significativas para el modelo
+
+```{r}
+if (pvalueb1 < 0.05){
+  cat("Se rechaza H_0, es decir, b1 es significativo para el modelo")
+}else{
+  cat("No existe evidencia para afirmar que b1 sea diferente de cero")
+}
+
+if (pvalueb2 < 0.05){
+  cat("Se rechaza H_0, es decir, b2 es significativo para el modelo")
+}else{
+  cat("No existe evidencia para afirmar que b2 sea diferente de cero")
+}
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 8. Intervalos de confianza para $\beta_i$
+
+Para el calculo de los intervalos de confianza de cada beta, se obtendrá el valor de probabilidad acumulada de una t student de dos colas con $n-1$ grados de libertad y se realizará el calculo para cada beta restandole el producto de la probabilidad acumulada con su error estándar, siendo su calculo de la siguiente manera:
+
+```{r}
+qa <- qt(0.05/2, n-1, lower.tail = FALSE)
+liminfb1 <- b1 - qa * result$coefficients[2,2]
+limsupb1 <- b1 + qa * result$coefficients[2,2]
+liminfb2 <- b2 - qa * result$coefficients[3,2]
+limsupb2 <- b2 + qa * result$coefficients[3,2]
+```
+
+Obteniendo los siguientes resultados, que afirman a un nivel alpha = 0.05 que cada beta se encuentra en ese intervalo.
+ 
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+data.frame("Beta" = c("límite superior", "límite inferior"), "1" = c(limsupb1, liminfb1)) %>%
+          kbl() %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+data.frame("Beta" = c("límite superior", "límite inferior"), "2" = c(limsupb2, liminfb2)) %>%
+          kbl() %>%
+          kable_classic(bootstrap_options = basic, full_width = F, html_font = "Cambria")
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 9. Gráfica del modelo
+
+Al graficar el modelo, podemos observar como puntos rojos cada uno de los datos que tenemos en el modelo y el plano representa nuestro modelo de regresión, la distancia entre cada uno de estos va a ser el error de predicción y al observarlo a detalle podemos ver que todos los errores parecen pequeños.
+
+```{r}
+rangox1 <- range(x1) # Valor mínimo
+rangox2 <- range(x2) # Valor máximo
+
+xedad <- seq(from=rangox1[1], to=rangox1[2], length.out=20)
+xpost <- seq(from=rangox2[1], to=rangox2[2], length.out=20)
+
+predictores <- outer(X=xedad, Y=xpost, FUN=function(x1,x2){
+  predict(object = modmult, newdata=data.frame(x1,x2))
+} )
+
+plano <- persp(x=xedad, y=xpost, z=predictores, col="skyblue", theta=30, phi=25)
+observaciones <- trans3d(x1, x2, y, plano)
+error <- trans3d(x1,x2,fitted(modmult),plano)
+points(observaciones,col="red",pch=19)
+segments(observaciones$x,observaciones$y,error$x,error$y)
+```
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 10. Análisis de residuales
+
+Los errores del modelo serán los residuales y podemos observar que los errores no se acercan a una distribución normal al graficarlos, además de estar todos bastante alejados del cero.
+
+```{r}
+error <- modmult$residuals
+plot(error, col="blue", pch=20)
+lines(1:n, rep(0,n), col="red")
+hist(error)
+boxplot(error)
+qqnorm(error)
+qqline(error)
+```
+
+Como el número de datos es mayor que 30, se usará la prueba shapiro y la anderson para comprobar si los errores se comportan de manera normal con mayor evidencia.
+
+```{r}
+shapiro.test(error)
+if (shapiro.test(error)$p.value >= 0.05) {
+print("No hay suficiente evidencia para afirmar H_0")
+} else {
+print("Rechazamos H0. No son normales")
+}
+```
+
+```{r}
+ad.test(error)
+if (ad.test(error)$p.value >= 0.05) {
+print("No hay suficiente evidencia para afirmar H_0")
+} else {
+print("Rechazamos H0. No son normales")
+}
+```
+
+De esta manera podemos decir que los errores no se comportan de manera normal.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+</n>
+</n>
+</n>
+
+### 11. Prueba de independencia
+
+Para comprobar la independencia de las variables, se puede realizar un test de independencia como el de pearson, y en este caso nos apotaremos de $R^2$ y $R^2$ ajustada para poder describir si existe una correlación entre las variables. En este caso concluimos que existe una correlación fuerte entre las variables.
+
+```{r}
+  rcuad <- result$r.squared
+  r.ajust <- result$adj.r.squared
+  if (abs(rcuad) >= 0.6) {
+    print("Hay una correlación fuerte")
+  } else if (abs(rcuad) <= 0.4) {
+    print("Hay una correlación baja")
+  } else {
+    print("Hay una correlación media")
+  }
+  if (abs(r.ajust) >= 0.6) {
+    print("Hay una correlación fuerte")
+  } else if (abs(r.ajust) <= 0.4) {
+    print("Hay una correlación baja")
+  } else {
+    print("Hay una correlación media")
+  }
+```
+
+
+
+
